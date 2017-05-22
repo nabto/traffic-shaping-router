@@ -9,9 +9,8 @@
 #include "packet.hpp"
 
 
-Packet::Packet(struct nfq_data *nfa, int id)
+Packet::Packet(struct nfq_data *nfa)
 {
-    id_ = id;
 	m_nfData = nfa;
     status_ = WAITING;
 	u_int32_t ifi;
@@ -42,21 +41,6 @@ Packet::Packet(struct nfq_data *nfa, int id)
 		}
 	}
     std::cout << "new packet fron IF: " << m_strInboundInterface << " To: " << m_strOutboundInterface << std::endl;
-}
-
-void Packet::processAsync(){//void (*cb)(int)){//std::function< void (int) > cb){
-    int i = id_ % 10; //rand() % 100;
-    std::cout << "processing packet with rand(): " << i << " From " <<  unsigned(m_pPacketData->srcIP.octet[0]) << "." <<  unsigned(m_pPacketData->srcIP.octet[1]) << "." <<  unsigned(m_pPacketData->srcIP.octet[2]) << "." <<  unsigned(m_pPacketData->srcIP.octet[3]) << " to " <<  unsigned(m_pPacketData->dstIP.octet[0]) << "." <<  unsigned(m_pPacketData->dstIP.octet[1]) << "." <<  unsigned(m_pPacketData->dstIP.octet[2]) << "." <<  unsigned(m_pPacketData->dstIP.octet[3]) << std::endl;
-    //std::cout << "processing packet From " <<  unsigned(m_pPacketData->srcIP.octet[0]) << "." <<  unsigned(m_pPacketData->srcIP.octet[1]) << "." <<  unsigned(m_pPacketData->srcIP.octet[2]) << "." <<  unsigned(m_pPacketData->srcIP.octet[3]) << " to " <<  unsigned(m_pPacketData->dstIP.octet[0]) << "." <<  unsigned(m_pPacketData->dstIP.octet[1]) << "." <<  unsigned(m_pPacketData->dstIP.octet[2]) << "." <<  unsigned(m_pPacketData->dstIP.octet[3]) << std::endl;
-    if(i == 0){
-        std::cout << "not sending" << std::endl;
-        status_ = DROPPED;
-        return;
-    }
-    status_ = READY_TO_SEND;
-    unsigned int microseconds = 100000;
-    usleep(microseconds);
-    //cb_(index_);
 }
 
 Packet::~Packet()
@@ -179,6 +163,10 @@ void Packet::dump()
 //	printf("\tPacket Length: %d\n",ntohs(m_pPacketData->nPacketLength));
 
 	// TODO: these two printfs will break if Network order != Host order
+    if(m_pPacketData == NULL){
+        std::cout << "cannot dump empty packet" << std::endl;
+        return;
+    }
 	printf("\tSource IP: %d.%d.%d.%d\n",
 		m_pPacketData->srcIP.octet[0],
 		m_pPacketData->srcIP.octet[1],

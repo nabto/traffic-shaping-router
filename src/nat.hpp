@@ -1,14 +1,15 @@
 #ifndef NAT_HPP
 #define NAT_HPP
 
-#include router.hpp
+#include "filter.hpp"
+#include "packet.hpp"
 
-class nat
+class Nat : public Filter
 {
  public:
-    nat();
-    ~nat();
-    NAT_STATUS handle_packet();
+    Nat();
+    ~Nat();
+    void handlePacket(Packet pkt);
 };
 
 #endif // NAT_HPP

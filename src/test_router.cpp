@@ -8,12 +8,14 @@
 #include "router.hpp"
 #include "structures.h"
 #include <functional>
-
+#include <sys/time.h>
 
 extern "C" {
 #include <libnetfilter_queue/libnetfilter_queue.h>
 #include <linux/netfilter.h>
 }
+
+std::vector<struct timeval> time_;
 
 static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, void *data)
 {
@@ -40,19 +42,25 @@ Router::~Router(){
 
 void Router::handlePacket(Packet pkt){
     std::cout << "Router sending packet" << std::endl;
-    pkt.send();
+    struct timeval stop;
+    struct timeval start = time_[0];
+    gettimeofday(&stop, NULL);
+    std::cout << "stop time was: " << stop.tv_usec << "us. Packet delay was: " << (stop.tv_sec-start.tv_sec)*1000000+ stop.tv_usec-start.tv_usec <<  "us"<< std::endl;
+    time_.erase(time_.begin());
+//    pkt.send();
 }
 
 int Router::newPacket(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, void *data)
 {
-    Packet pkt(nfa);
-    std::cout << "after pkt" << std::endl;
-    int ret = nfq_set_verdict(qh, pkt.getNetfilterID(), NF_DROP, 0, NULL);
-    std::cout << "after verdict" << std::endl;
+    Packet pkt;
+    std::cout << "starting timer" << std::endl;
+    struct timeval start;
+    gettimeofday(&start, NULL);
+    time_.push_back(start);
+    std::cout << "start time was: " << start.tv_usec << "us" << std::endl;
 //    ioService_.post(boost::bind(f, pkt));
     next_->handlePacket(pkt);
-    std::cout << "returning from router with " << ret << std::endl;
-    return ret;
+    return 0;
 }
 
 RouterPtr Router::getInstance()

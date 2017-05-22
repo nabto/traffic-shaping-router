@@ -1,12 +1,14 @@
 #ifndef PACKET_H // one-time include
 #define PACKET_H
 
+#include <stdint.h>
+
 extern "C" {
 #include <libnetfilter_queue/libnetfilter_queue.h>
 //#include <libnetfilter_queue/libipq.h>
-#include <linux/netfilter.h>
+//#include <linux/netfilter.h>
 }
-
+#include "boost/date_time/posix_time/posix_time.hpp"
 #include <string>
 #include <functional>
 #include "structures.h"
@@ -18,6 +20,7 @@ extern "C" {
 typedef enum _verdict
 {
     DROPPED,
+    ACCEPTED,
     READY_TO_SEND,
     WAITING
 } verdict;
@@ -68,13 +71,13 @@ typedef struct _tcpPacket
 
 } tcpPacket;
 
-void func (  );
-
 class Packet
 {
  public:
 
-    Packet(struct nfq_data *nfa, int id);//, std::function<void(int)> cb);
+    Packet(struct nfq_data *nfa);
+    // Construct empty packet for testing purposes
+    Packet(){};
     ~Packet();
 		
     const int getNetfilterID() const;
@@ -103,16 +106,13 @@ class Packet
 
 		
     void dump();
-    void setIndex(int i){ index_ = i;}
-    int getIndex(){return index_;}
-    int getId(){return id_;}
     int getVerdict(){return status_;}
+    void setVerdict(verdict status){status_ = status;}
+    void setTimeStamp(){stamp_ = boost::posix_time::second_clock::local_time();}
 
  protected:
-    int index_;
-    int id_;
+    boost::posix_time::ptime stamp_;
     verdict status_;
-//    std::function< void (int) > cb_;
     struct nfq_data* m_nfData;
     rawPacket* m_pPacketData;
     int m_nPacketDataLen;
