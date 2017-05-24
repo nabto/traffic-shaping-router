@@ -8,7 +8,6 @@
 
 #include "packet.hpp"
 
-
 Packet::Packet(struct nfq_data *nfa)
 {
 	m_nfData = nfa;
@@ -152,6 +151,7 @@ ROUTER_STATUS Packet::send()
 
 void Packet::dump()
 {
+    printf("\tid is %i\n", getNetfilterID());
 	printf("\tInbound interface: %s\n",m_strInboundInterface.c_str());
 	printf("\tOutbound interface: %s\n",m_strOutboundInterface.c_str());
 //	printf("\n");

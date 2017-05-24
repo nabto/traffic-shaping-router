@@ -30,7 +30,7 @@ void Router::init(){
     id_ = 0;
     auto self = shared_from_this();
     nat_ = std::make_shared<Nat>();
-    shaper_ = std::make_shared<Shaper>();
+    shaper_ = std::make_shared<Shaper>(10,0.1);
     setNext(nat_);
     nat_->setNext(shaper_);
     shaper_->setNext(self);

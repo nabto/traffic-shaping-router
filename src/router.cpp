@@ -28,7 +28,7 @@ void Router::init(){
     id_ = 0;
     auto self = shared_from_this();
     nat_ = std::make_shared<Nat>();
-    shaper_ = std::make_shared<Shaper>();
+    shaper_ = std::make_shared<Shaper>(100, 0.1);
     setNext(nat_);
     nat_->setNext(shaper_);
     shaper_->setNext(self);
@@ -46,9 +46,7 @@ void Router::handlePacket(Packet pkt){
 int Router::newPacket(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, void *data)
 {
     Packet pkt(nfa);
-    std::cout << "after pkt" << std::endl;
     int ret = nfq_set_verdict(qh, pkt.getNetfilterID(), NF_DROP, 0, NULL);
-    std::cout << "after verdict" << std::endl;
 //    ioService_.post(boost::bind(f, pkt));
     next_->handlePacket(pkt);
     std::cout << "returning from router with " << ret << std::endl;
@@ -62,8 +60,8 @@ RouterPtr Router::getInstance()
     std::lock_guard<std::mutex> lock(mutex2_);
     if ( !instance_ ) {
         instance_ = std::make_shared<Router>();
+        instance_->init();
     }
-    instance_->init();
     return instance_;
 }
 
