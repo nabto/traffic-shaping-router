@@ -27,11 +27,13 @@ Router::Router(){
 void Router::init(){
     id_ = 0;
     auto self = shared_from_this();
+    loss_ = std::make_shared<Loss>(0);
     nat_ = std::make_shared<Nat>();
-    shaper_ = std::make_shared<Shaper>(100, 0.1);
-    setNext(nat_);
-    nat_->setNext(shaper_);
-    shaper_->setNext(self);
+    delay_ = std::make_shared<StaticDelay>(100);
+    setNext(loss_);
+    loss_->setNext(nat_);
+    nat_->setNext(delay_);
+    delay_->setNext(self);
 
 }
 
@@ -48,7 +50,10 @@ int Router::newPacket(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nf
     Packet pkt(nfa);
     int ret = nfq_set_verdict(qh, pkt.getNetfilterID(), NF_DROP, 0, NULL);
 //    ioService_.post(boost::bind(f, pkt));
-    next_->handlePacket(pkt);
+    {
+        std::lock_guard<std::mutex> lock(nextMutex_);
+        next_->handlePacket(pkt);
+    }
     std::cout << "returning from router with " << ret << std::endl;
     return ret;
 }
@@ -56,8 +61,8 @@ int Router::newPacket(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nf
 RouterPtr Router::getInstance()
 {
     static RouterPtr instance_;
-    static std::mutex mutex2_;
-    std::lock_guard<std::mutex> lock(mutex2_);
+    static std::mutex instanceMutex_;
+    std::lock_guard<std::mutex> lock(instanceMutex_);
     if ( !instance_ ) {
         instance_ = std::make_shared<Router>();
         instance_->init();
@@ -104,6 +109,7 @@ bool Router::execute()
     std::cout << "Router starting Execute loop" << std::endl;
 	while ((rv = recv(fd, buf, sizeof(buf), 0)) && rv >= 0) {	
         nfq_handle_packet(h, buf, rv);
+        std::cout << "Packet handled running next execute loop" << std::endl;
 	}
 
 	nfq_destroy_queue(qh);

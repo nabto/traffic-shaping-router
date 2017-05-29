@@ -36,6 +36,7 @@ target_link_libraries(router
   nfnetlink
   boost_system
   boost_thread
+  boost_date_time
   libnet.so)
 target_link_libraries(test_router
   test_router_src
@@ -47,4 +48,5 @@ target_link_libraries(test_router
   nfnetlink
   boost_system
   boost_thread
+  boost_date_time
   libnet.so)

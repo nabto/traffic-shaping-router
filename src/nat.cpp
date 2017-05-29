@@ -7,7 +7,6 @@ Nat::Nat(){}
 Nat::~Nat(){}
 void Nat::handlePacket(Packet pkt){
     std::cout << "nat handling" << std::endl;
-    pkt.setVerdict(ACCEPTED);
     next_->handlePacket(pkt);
 }
 

@@ -62,7 +62,7 @@ iptables -A FORWARD -p icmp -j NFQUEUE --queue-num 0
 echo "starting Router from bash"
 router &
 echo "Router started from bash"
-
+echo $(($(date +%s%N)/1000000))
 
 
 trap "kill 0" SIGTERM

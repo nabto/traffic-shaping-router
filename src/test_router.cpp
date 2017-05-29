@@ -30,10 +30,12 @@ void Router::init(){
     id_ = 0;
     auto self = shared_from_this();
     nat_ = std::make_shared<Nat>();
-    shaper_ = std::make_shared<Shaper>(10,0.1);
+    delay_ = std::make_shared<StaticDelay>(100);
+    loss_ = std::make_shared<Loss>(0.1);
     setNext(nat_);
-    nat_->setNext(shaper_);
-    shaper_->setNext(self);
+    nat_->setNext(loss_);
+    loss_->setNext(delay_);
+    delay_->setNext(self);
 
 }
 

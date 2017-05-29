@@ -13,5 +13,19 @@ int main (int argc, char* argv[])
     rt->newPacket(NULL,NULL,NULL,NULL);
     usleep(2000);
     rt->newPacket(NULL,NULL,NULL,NULL);
+    usleep(2000);
+    rt->newPacket(NULL,NULL,NULL,NULL);
+    usleep(2000);
+    rt->newPacket(NULL,NULL,NULL,NULL);
+    usleep(2000);
+    rt->newPacket(NULL,NULL,NULL,NULL);
+    usleep(2000);
+    rt->newPacket(NULL,NULL,NULL,NULL);
+    usleep(2000);
+    rt->newPacket(NULL,NULL,NULL,NULL);
+    usleep(2000);
+    rt->newPacket(NULL,NULL,NULL,NULL);
+    usleep(2000);
+    rt->newPacket(NULL,NULL,NULL,NULL);
     sleep(2);
 }

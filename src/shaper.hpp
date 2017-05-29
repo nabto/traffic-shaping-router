@@ -14,23 +14,31 @@
 #include <queue>
 #include <mutex>
 
-class Shaper : public Filter
+class StaticDelay : public Filter
 {
  public:
-    Shaper(int delay, float loss);
-    ~Shaper();
+    StaticDelay(int delay);
+    ~StaticDelay();
     void handlePacket(Packet pkt);
     void queueTimeEvent();
 
  private:
-    int delay_;
-    float loss_;
+    boost::posix_time::time_duration delay_;
     std::shared_ptr<TpService>  tp_;
     std::mutex mutex_;
     std::queue<Packet> queue_;
     boost::asio::io_service* ioService_;
-//    boost::thread_group threadpool_;
-//    boost::scoped_ptr<boost::asio::io_service::work> work_;
+};
+
+class Loss : public Filter
+{
+ public:
+    Loss(float loss);
+    ~Loss();
+    void handlePacket(Packet pkt);
+
+ private:
+    float loss_;
 };
 
 #endif // SHAPER_HPP

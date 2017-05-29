@@ -22,10 +22,11 @@ class Router : public Filter
     int newPacket(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, void *data);
     void handlePacket(Packet pkt);
  private:
-    std::mutex mutex_;
+    std::mutex nextMutex_;
     int id_;
     std::vector<Packet> packets_;
-    std::shared_ptr<Filter> shaper_;
+    std::shared_ptr<Filter> delay_;
+    std::shared_ptr<Filter> loss_;
     std::shared_ptr<Filter> nat_;
     //Shaper shaper_;
     //Nat nat_;

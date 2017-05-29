@@ -8,7 +8,8 @@ extern "C" {
 //#include <libnetfilter_queue/libipq.h>
 //#include <linux/netfilter.h>
 }
-#include "boost/date_time/posix_time/posix_time.hpp"
+#include <boost/date_time/gregorian/gregorian.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <string>
 #include <functional>
 #include "structures.h"
@@ -44,7 +45,7 @@ typedef struct _rawPacket
 	ipAddr		srcIP;
 	ipAddr		dstIP;
 	
-	unsigned char	data[];
+	unsigned char	data[1500];
 } rawPacket;
 
 typedef struct _udpPacket
@@ -77,7 +78,7 @@ class Packet
 
     Packet(struct nfq_data *nfa);
     // Construct empty packet for testing purposes
-    Packet(){};
+    Packet();//{stamp_ = boost::posix_time::microsec_clock::local_time();};
     ~Packet();
 		
     const int getNetfilterID() const;
@@ -88,15 +89,6 @@ class Packet
 		
     const uint8_t getProtocol() const;
 		
-    ROUTER_STATUS getPacketTuple(icmp_packet_tuple &tuple) const;
-    ROUTER_STATUS getPacketTuple(udp_packet_tuple &tuple) const;
-    ROUTER_STATUS getPacketTuple(tcp_packet_tuple &tuple) const;
-
-    ROUTER_STATUS setPacketTuple(const icmp_packet_tuple &tuple);
-    ROUTER_STATUS setPacketTuple(const udp_packet_tuple &tuple);
-    ROUTER_STATUS setPacketTuple(const tcp_packet_tuple &tuple);
-
-		
     void getInboundInterface(std::string & in) const;
     void getOutboundInterface(std::string & out) const;
     void setOutboundInterface(const std::string & out);
@@ -106,19 +98,19 @@ class Packet
 
 		
     void dump();
-    int getVerdict(){return status_;}
-    void setVerdict(verdict status){status_ = status;}
-    void setTimeStamp(){stamp_ = boost::posix_time::second_clock::local_time();}
+    void resetTimeStamp(){stamp_ = boost::posix_time::microsec_clock::local_time();}
+    boost::posix_time::ptime getTimeStamp(){return stamp_;}
 
  protected:
     boost::posix_time::ptime stamp_;
-    verdict status_;
     struct nfq_data* m_nfData;
-    rawPacket* m_pPacketData;
+    rawPacket m_pPacketData;
+    rawPacket* orgPktDataPtr_;
     int m_nPacketDataLen;
     std::string	m_strInboundInterface;
     std::string	m_strOutboundInterface;
-    struct nfqnl_msg_packet_hdr *ph_;
+    struct nfqnl_msg_packet_hdr *orgPktHead_;
+    struct nfqnl_msg_packet_hdr ph_;
 	
 		
     void calcIPchecksum();
