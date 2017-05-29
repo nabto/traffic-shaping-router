@@ -20,21 +20,19 @@ iptables -F
 #iptables -t nat -F
 
 iptables -P INPUT DROP
-iptables -P FORWARD DROP
+iptables -P FORWARD ACCEPT
 iptables -A INPUT ! -i $os -j ACCEPT
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 
-iptables -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
-iptables -A FORWARD ! -i $os -j ACCEPT
 iptables -t nat -A POSTROUTING -o $os -j MASQUERADE
 
 echo 1 > /proc/sys/net/ipv4/ip_forward
 
-#iptables -A FORWARD -p icmp -j NFQUEUE --queue-num 0
+iptables -A FORWARD -j NFQUEUE --queue-num 0
 #iptables -A INPUT -p udp -j NFQUEUE --queue-num 0
 
 echo "starting Router from bash"
-#router &
+router &
 echo "Router started from bash"
 echo $(($(date +%s%N)/1000000))
 
