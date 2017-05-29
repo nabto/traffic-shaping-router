@@ -2,20 +2,16 @@ version: '2.1'
 services:
   router:
     build: ../router_node
-    command: router.sh "10.0.0.0/24" portrnat
+    command: router.sh
     privileged: true
     volumes:
       - ./data:/data
     networks:
       default:
-      destination:
-        ipv4_address: 10.0.1.1
       pinger_net:
         ipv4_address: 10.0.2.1
     environment:
         - DUMPNAME=router
-        - PINGERIP=10.0.2.1
-        - DSTIP=10.0.1.1
 
   pinger:
     build: ../ping_node
@@ -23,32 +19,13 @@ services:
     privileged: true
     volumes:
       - ./data:/data
-    dns:
-      - 8.8.8.8
     networks:
       pinger_net:
         ipv4_address: 10.0.2.2
     environment:
       - GATEWAY=10.0.2.1
-      - DSTADDR=10.0.1.2
       - DUMPNAME=pinger
 
-  dst:
-    build: ../ping_node
-    command: dump.sh
-    privileged: true
-    volumes:
-      - ./data:/data
-    dns:    
-      - 8.8.8.8
-    networks:
-      destination:
-        ipv4_address: 10.0.1.2
-    environment:
-      - GATEWAY=10.0.1.1
-      - DUMPNAME=dst
-
-      
 networks:
   pinger_net:
     driver: macvlan
@@ -58,11 +35,4 @@ networks:
       config:
         - subnet: 10.0.2.0/24
           ip_range: 10.0.2.64/26
-  destination:
-    driver: macvlan
-    internal: true
-    ipam:
-      driver: default
-      config:
-        - subnet: 10.0.1.0/24
-          ip_range: 10.0.1.64/26
+

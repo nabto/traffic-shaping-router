@@ -1,5 +1,5 @@
 FROM tianon/debian:testing
-RUN apt-get update && apt-get install -y openssh-server net-tools wget iproute iptables libnet-dev libnetfilter-queue-dev libboost-program-options-dev libboost-thread-dev libboost-system-dev tcpdump less libstdc++6 binutils libboost1.62-all-dev --force-yes
+RUN apt-get update && apt-get install -y openssh-server net-tools wget iproute iptables libnet-dev libnetfilter-queue-dev libboost-program-options-dev libboost-thread-dev libboost-system-dev tcpdump less libstdc++6 binutils libboost1.62-all-dev vim dnsutils --force-yes
 
 RUN mkdir -p /var/run/sshd
 RUN mkdir -p /var/log/supervisor
