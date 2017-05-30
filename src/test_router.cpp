@@ -6,7 +6,6 @@
 #include <mutex>
 #include <stdint.h>
 #include "router.hpp"
-#include "structures.h"
 #include <functional>
 #include <sys/time.h>
 

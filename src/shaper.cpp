@@ -1,6 +1,5 @@
 #include "shaper.hpp"
 #include "packet.hpp"
-#include "structures.h"
 #include <unistd.h>
 
 /* ========= STATIC DELAY FILTER ==========*/

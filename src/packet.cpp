@@ -156,19 +156,16 @@ void Packet::dump() {
     if (this->getProtocol() == PROTO_ICMP) {
         printf("\tICMP Packet\n");
     } else if (this->getProtocol() == PROTO_UDP) {
-        unsigned char* pData = (m_pPacketData.data) + this->getPacketHeaderLength() - LIBNET_IPV4_H;
-        udpPacket* udp = (udpPacket*)pData;
+        uint16_t* pData = (uint16_t *)((m_pPacketData.data) + this->getPacketHeaderLength() - LIBNET_IPV4_H);
 
-        printf("\tUDP Source Port: %d\n",ntohs(udp->srcPort));
-        printf("\tUDP Destination Port: %d\n",ntohs(udp->dstPort));
+        printf("\tUDP Source Port: %d\n",ntohs(*pData));
+        printf("\tUDP Destination Port: %d\n",ntohs(*(pData+1)));
 
     } else if (this->getProtocol() == PROTO_TCP) {
-        unsigned char* pData = (m_pPacketData.data) + this->getPacketHeaderLength() - LIBNET_IPV4_H;
-        tcpPacket* tcp = (tcpPacket*)pData;
+        uint16_t* pData = (uint16_t *)((m_pPacketData.data) + this->getPacketHeaderLength() - LIBNET_IPV4_H);
 
-        printf("\tTCP Source Port: %d\n",ntohs(tcp->srcPort));
-        printf("\tTCP Destination Port: %d\n",ntohs(tcp->dstPort));
-
+        printf("\tTCP Source Port: %d\n",ntohs(*pData));
+        printf("\tTCP Destination Port: %d\n",ntohs(*(pData+1)));
     } else {
         printf("\tUnknown Protocol\n");
     }

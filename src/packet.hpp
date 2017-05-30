@@ -12,11 +12,18 @@ extern "C" {
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <string>
 #include <functional>
-#include "structures.h"
 
 #define PROTO_ICMP 1
 #define PROTO_TCP 6
 #define PROTO_UDP 17
+
+typedef enum _ROUTER_STATUS
+{
+    S_OK,
+    E_FAILED,
+    E_UNDEFINED,
+    E_INVALID_PROTOCOL
+} ROUTER_STATUS;
 
 typedef union _ipAddr
 {
@@ -39,30 +46,6 @@ typedef struct _rawPacket
 
     unsigned char data[1500];
 } rawPacket;
-
-typedef struct _udpPacket
-{
-    uint16_t srcPort;
-    uint16_t dstPort;
-    uint16_t nLength;
-    uint16_t nChecksum;
-
-    unsigned char data[];
-} udpPacket;
-
-typedef struct _tcpPacket
-{
-    uint16_t srcPort;
-    uint16_t dstPort;
-    uint32_t nSeqNum;
-    uint32_t nAckId;
-    uint32_t nHeaderLenFlags; // Combined header length, Reserved, and flag bits
-    uint16_t nWindowSize;
-    uint16_t nUrgPtr;
-
-    unsigned char data[];
-
-} tcpPacket;
 
 class Packet
 {

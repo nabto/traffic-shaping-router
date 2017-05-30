@@ -1,6 +1,5 @@
 #include "nat.hpp"
 #include "packet.hpp"
-#include "structures.h"
 
 
 Nat::Nat(){}
