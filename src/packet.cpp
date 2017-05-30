@@ -88,50 +88,50 @@ ROUTER_STATUS Packet::send() {
         ret = S_OK;
     }
 
-	if (ret == S_OK) {
-		// Build packet
-		// Advance pointer past any options headers.
-		unsigned char* pData = (m_pPacketData.data) + this->getPacketHeaderLength() - LIBNET_IPV4_H;
+    if (ret == S_OK) {
+        // Build packet
+        // Advance pointer past any options headers.
+        unsigned char* pData = (m_pPacketData.data) + this->getPacketHeaderLength() - LIBNET_IPV4_H;
 
-		ip_ptag = libnet_build_ipv4(
-			LIBNET_IPV4_H + ntohs(m_pPacketData.nPacketLength) - this->getPacketHeaderLength(),                  /* length */
-			m_pPacketData.flagsTOS,		/* TOS */
-			this->getFragmentID(),			/* IP fragment ID */
-			this->getFragmentFlags(),		/* IP Frag flags*/
-			m_pPacketData.TTL,				/* TTL */
-			m_pPacketData.nProtocol,		/* protocol */
-			0,								/* checksum (let libnet calculate) */
-			m_pPacketData.srcIP.raw,		/* source IP */
-			m_pPacketData.dstIP.raw,		/* destination IP */
-			pData,							/* payload */
-			ntohs(m_pPacketData.nPacketLength) - this->getPacketHeaderLength(),                                  /* payload size */
-			l,								/* libnet handle */
-			ip_ptag);						/* libnet id */
+        ip_ptag = libnet_build_ipv4(
+            LIBNET_IPV4_H + ntohs(m_pPacketData.nPacketLength) - this->getPacketHeaderLength(), /* length */
+            m_pPacketData.flagsTOS,	  /* TOS */
+            this->getFragmentID(),    /* IP fragment ID */
+            this->getFragmentFlags(), /* IP Frag flags*/
+            m_pPacketData.TTL,        /* TTL */
+            m_pPacketData.nProtocol,  /* protocol */
+            0,                        /* checksum (let libnet calculate) */
+            m_pPacketData.srcIP.raw,  /* source IP */
+            m_pPacketData.dstIP.raw,  /* destination IP */
+            pData,                    /* payload */
+            ntohs(m_pPacketData.nPacketLength) - this->getPacketHeaderLength(), /* payload size */
+            l,                        /* libnet handle */
+		    ip_ptag);                 /* libnet id */
 
 
-		if (ip_ptag == -1) {
-			fprintf(stderr, "Can't build IP header: %s\n", libnet_geterror(l));
-			ret = E_FAILED;
-	    } else {
-			ret = S_OK;
-		}
+        if (ip_ptag == -1) {
+            fprintf(stderr, "Can't build IP header: %s\n", libnet_geterror(l));
+            ret = E_FAILED;
+        } else {
+            ret = S_OK;
+        }
 
-		// TODO: Add IP options (if any)
+        // TODO: Add IP options (if any)
 
-		if (ret == S_OK) {
-			// Write to network
-			count = libnet_write(l);
-			if (count == -1) {
-				fprintf(stderr, "Write error: %s\n", libnet_geterror(l));
-				ret = E_FAILED;
-			} else {
-				ret = S_OK;
-			}
-		}
+        if (ret == S_OK) {
+            // Write to network
+            count = libnet_write(l);
+            if (count == -1) {
+                fprintf(stderr, "Write error: %s\n", libnet_geterror(l));
+                ret = E_FAILED;
+            } else {
+                ret = S_OK;
+            }
+        }
 
-		libnet_destroy(l);
-	}
-	return ret;
+        libnet_destroy(l);
+    }
+    return ret;
 }
 
 void Packet::dump() {
@@ -224,6 +224,5 @@ void Packet::dumpMem(unsigned char* p,int len) {
 
     printf("\n");
     printf("\t\t------------------------------------------------\n");
-
 }
 

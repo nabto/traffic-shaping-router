@@ -18,57 +18,49 @@ extern "C" {
 #define PROTO_TCP 6
 #define PROTO_UDP 17
 
-typedef enum _verdict
-{
-    DROPPED,
-    ACCEPTED,
-    READY_TO_SEND,
-    WAITING
-} verdict;
-
 typedef union _ipAddr
 {
-	uint32_t	raw;
-	unsigned char	octet[4];
+    uint32_t      raw;
+    unsigned char octet[4];
 } ipAddr;
 
 typedef struct _rawPacket
 {
-	uint8_t		nVersionLength;
-	uint8_t		flagsTOS;
-	uint16_t	nPacketLength;
-	uint16_t	nFragmentID;
-	uint16_t	nFragFlagsOffset;
-	uint8_t		TTL;
-	uint8_t		nProtocol;
-	uint16_t	nHeaderChecksum;
-	ipAddr		srcIP;
-	ipAddr		dstIP;
-	
-	unsigned char	data[1500];
+    uint8_t  nVersionLength;
+    uint8_t	 flagsTOS;
+    uint16_t nPacketLength;
+    uint16_t nFragmentID;
+    uint16_t nFragFlagsOffset;
+    uint8_t	 TTL;
+    uint8_t	 nProtocol;
+    uint16_t nHeaderChecksum;
+    ipAddr   srcIP;
+    ipAddr   dstIP;
+
+    unsigned char data[1500];
 } rawPacket;
 
 typedef struct _udpPacket
 {
-	uint16_t srcPort;
-	uint16_t dstPort;
-	uint16_t nLength;
-	uint16_t nChecksum;
+    uint16_t srcPort;
+    uint16_t dstPort;
+    uint16_t nLength;
+    uint16_t nChecksum;
 
-	unsigned char	data[];
+    unsigned char data[];
 } udpPacket;
 
 typedef struct _tcpPacket
 {
-	uint16_t srcPort;
-	uint16_t dstPort;
-	uint32_t nSeqNum;
-	uint32_t nAckId;
-	uint32_t nHeaderLenFlags; // Combined header length, Reserved, and flag bits
-	uint16_t nWindowSize;
-	uint16_t nUrgPtr;
-	
-	unsigned char	data[];
+    uint16_t srcPort;
+    uint16_t dstPort;
+    uint32_t nSeqNum;
+    uint32_t nAckId;
+    uint32_t nHeaderLenFlags; // Combined header length, Reserved, and flag bits
+    uint16_t nWindowSize;
+    uint16_t nUrgPtr;
+
+    unsigned char data[];
 
 } tcpPacket;
 
@@ -92,11 +84,10 @@ class Packet
     void getInboundInterface(std::string & in) const;
     void getOutboundInterface(std::string & out) const;
     void setOutboundInterface(const std::string & out);
-    
+
     void processAsync();
     ROUTER_STATUS send();
 
-		
     void dump();
     void resetTimeStamp(){stamp_ = boost::posix_time::microsec_clock::local_time();}
     boost::posix_time::ptime getTimeStamp(){return stamp_;}
@@ -115,7 +106,6 @@ class Packet
  private:
     void dumpMem(unsigned char* p,int len);
     short getPacketHeaderLength() const;
-
 
 };
 
