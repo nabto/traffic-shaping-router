@@ -1,6 +1,6 @@
 FROM tianon/debian:jessie
 
-RUN apt-get update && apt-get install -y iproute net-tools iptables libgoogle-perftools-dev dnsutils psmisc procps  tcpdump less --force-yes
+RUN apt-get update && apt-get install -y iproute net-tools iptables libgoogle-perftools-dev dnsutils psmisc procps  tcpdump less dnsutils --force-yes
 
 ADD pipework /usr/bin/
 COPY ping.sh /usr/bin/ping.sh
