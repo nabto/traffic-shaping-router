@@ -5,10 +5,7 @@
 
 Nat::Nat(){}
 Nat::~Nat(){}
-void Nat::handlePacket(Packet pkt){
-#ifdef TRACE_LOG
-    std::cout << "Applying NAT" << std::endl;
-#endif
+void Nat::handlePacket(Packet pkt) {
     next_->handlePacket(pkt);
 }
 

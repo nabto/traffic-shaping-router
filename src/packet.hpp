@@ -78,7 +78,7 @@ class Packet
 
     Packet(struct nfq_data *nfa);
     // Construct empty packet for testing purposes
-    Packet();//{stamp_ = boost::posix_time::microsec_clock::local_time();};
+    Packet();
     ~Packet();
 		
     const int getNetfilterID() const;
@@ -111,13 +111,7 @@ class Packet
     std::string	m_strOutboundInterface;
     struct nfqnl_msg_packet_hdr *orgPktHead_;
     struct nfqnl_msg_packet_hdr ph_;
-	
-		
-    void calcIPchecksum();
-    void calcUDPchecksum();
-    void calcTCPchecksum();
 
-	
  private:
     void dumpMem(unsigned char* p,int len);
     short getPacketHeaderLength() const;

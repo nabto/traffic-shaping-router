@@ -11,24 +11,10 @@ include_directories("/usr/include/boost")
 set(CFLAGS "-fPIC -Wall -Werror -g")
 
 add_definitions(${CFLAGS})
-if (CMAKE_BUILD_TYPE MATCHES "Debug")
-  message("Enabling trace log")
-  add_definitions(-DTRACE_LOG=1)
-endif ()
-  
-
 
 add_executable(test_router test_main.cpp)
 add_executable(router main.cpp)
 
-#find_library(libnet NAMES net libnet PATHS /usr/lib/x86_64-linux-gnu)
-#include_directories(<wherever you built it to>/include)
-#target_link_libraries(router libnet)
-
-#target_link_libraries(Router libnet)
-
-#find_library(libnet NAMES libnet.so PATHS /usr/lib/x86_64-linux-gnu/)
-#target_link_libraries(router LIBNET_LIB)
 link_directories("/usr/lib/x86_64-linux-gnu")
 target_link_libraries(router
   router_src

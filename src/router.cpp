@@ -15,18 +15,17 @@ extern "C" {
 #include <linux/netfilter.h>
 }
 
-static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, void *data)
-{
+static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, void *data) {
 	RouterPtr rt = Router::getInstance();
 	return rt->newPacket(qh,nfmsg,nfa,data);
 }
 
-Router::Router(){
+Router::Router() {
     lossProb_ = 0;
     delayMs_ = 0;
 }
 
-void Router::init(){
+void Router::init() {
     auto self = shared_from_this();
     loss_ = std::make_shared<Loss>(lossProb_);
     nat_ = std::make_shared<Nat>();
@@ -38,13 +37,10 @@ void Router::init(){
 
 }
 
-Router::~Router(){
+Router::~Router() {
 }
 
-void Router::handlePacket(Packet pkt){
-#ifdef TRACE_LOG
-    std::cout << "Router sending packet" << std::endl;
-#endif
+void Router::handlePacket(Packet pkt) {
     pkt.send();
 }
 
@@ -52,31 +48,24 @@ int Router::newPacket(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nf
 {
     Packet pkt(nfa);
     int ret = nfq_set_verdict(qh, pkt.getNetfilterID(), NF_DROP, 0, NULL);
-//    ioService_.post(boost::bind(f, pkt));
-    {
-        std::lock_guard<std::mutex> lock(nextMutex_);
-        next_->handlePacket(pkt);
-    }
-#ifdef TRACE_LOG
-    std::cout << "returning from router with " << ret << std::endl;
-#endif
+    next_->handlePacket(pkt);
     return ret;
 }
 
-RouterPtr Router::getInstance()
-{
+RouterPtr Router::getInstance() {
     static RouterPtr instance_;
     static std::mutex instanceMutex_;
     std::lock_guard<std::mutex> lock(instanceMutex_);
     if ( !instance_ ) {
         instance_ = std::make_shared<Router>();
+        // Running init() with default parameters, if setDelay(), setLoss()
+        // is called, init() should be called again manually
         instance_->init();
     }
     return instance_;
 }
 
-bool Router::execute()
-{
+bool Router::execute() {
 	struct nfq_handle *h;
 	struct nfq_q_handle *qh;
 	struct nfnl_handle *nh;
@@ -114,9 +103,6 @@ bool Router::execute()
     std::cout << "Router starting Execute loop" << std::endl;
 	while ((rv = recv(fd, buf, sizeof(buf), 0)) && rv >= 0) {	
         nfq_handle_packet(h, buf, rv);
-#ifdef TRACE_LOG
-        std::cout << "Packet handled running next execute loop" << std::endl;
-#endif
 	}
 
 	nfq_destroy_queue(qh);

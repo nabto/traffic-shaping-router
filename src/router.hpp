@@ -25,15 +25,12 @@ class Router : public Filter
     void setLoss(float loss){lossProb_ = loss;}
     
  private:
-    std::mutex nextMutex_;
     std::vector<Packet> packets_;
     std::shared_ptr<Filter> delay_;
     std::shared_ptr<Filter> loss_;
     std::shared_ptr<Filter> nat_;
     int delayMs_;
     float lossProb_;
-    //Shaper shaper_;
-    //Nat nat_;
 };
 
 #endif // ROUTER_HPP

@@ -23,6 +23,7 @@ class StaticDelay : public Filter
     void queueTimeEvent();
 
  private:
+    void scheduleEvent();
     boost::posix_time::time_duration delay_;
     std::shared_ptr<TpService>  tp_;
     std::mutex mutex_;
