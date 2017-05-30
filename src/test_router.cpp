@@ -27,14 +27,13 @@ Router::Router(){
 }
 
 void Router::init(){
-    id_ = 0;
     auto self = shared_from_this();
     nat_ = std::make_shared<Nat>();
     delay_ = std::make_shared<StaticDelay>(100);
     loss_ = std::make_shared<Loss>(0.1);
-    setNext(nat_);
-    nat_->setNext(loss_);
-    loss_->setNext(delay_);
+    setNext(loss_);
+    loss_->setNext(nat_);
+    nat_->setNext(delay_);
     delay_->setNext(self);
 
 }
@@ -72,8 +71,8 @@ RouterPtr Router::getInstance()
     std::lock_guard<std::mutex> lock(mutex2_);
     if ( !instance_ ) {
         instance_ = std::make_shared<Router>();
+        instance_->init();
     }
-    instance_->init();
     return instance_;
 }
 

@@ -32,7 +32,7 @@ iptables -A FORWARD -j NFQUEUE --queue-num 0
 #iptables -A INPUT -p udp -j NFQUEUE --queue-num 0
 
 echo "starting Router from bash"
-router &
+router 200 0.1 &
 echo "Router started from bash"
 echo $(($(date +%s%N)/1000000))
 

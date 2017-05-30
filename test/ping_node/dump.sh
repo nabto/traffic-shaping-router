@@ -20,7 +20,7 @@ tcpdump -i any -s 1500 -w /data/${DUMPNAME}.dump &
 
 sleep 1
 
-ping -W 1 -c 1 127.0.0.1
-ping -W 1 ${GATEWAY}
+#ping -W 1 -c 1 127.0.0.1
+#ping -W 1 ${GATEWAY}
 
 tail -f /dev/null

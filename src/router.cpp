@@ -22,14 +22,15 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *
 }
 
 Router::Router(){
+    lossProb_ = 0;
+    delayMs_ = 0;
 }
 
 void Router::init(){
-    id_ = 0;
     auto self = shared_from_this();
-    loss_ = std::make_shared<Loss>(0);
+    loss_ = std::make_shared<Loss>(lossProb_);
     nat_ = std::make_shared<Nat>();
-    delay_ = std::make_shared<StaticDelay>(100);
+    delay_ = std::make_shared<StaticDelay>(delayMs_);
     setNext(loss_);
     loss_->setNext(nat_);
     nat_->setNext(delay_);
@@ -41,7 +42,9 @@ Router::~Router(){
 }
 
 void Router::handlePacket(Packet pkt){
+#ifdef TRACE_LOG
     std::cout << "Router sending packet" << std::endl;
+#endif
     pkt.send();
 }
 
@@ -54,7 +57,9 @@ int Router::newPacket(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nf
         std::lock_guard<std::mutex> lock(nextMutex_);
         next_->handlePacket(pkt);
     }
+#ifdef TRACE_LOG
     std::cout << "returning from router with " << ret << std::endl;
+#endif
     return ret;
 }
 
@@ -109,7 +114,9 @@ bool Router::execute()
     std::cout << "Router starting Execute loop" << std::endl;
 	while ((rv = recv(fd, buf, sizeof(buf), 0)) && rv >= 0) {	
         nfq_handle_packet(h, buf, rv);
+#ifdef TRACE_LOG
         std::cout << "Packet handled running next execute loop" << std::endl;
+#endif
 	}
 
 	nfq_destroy_queue(qh);

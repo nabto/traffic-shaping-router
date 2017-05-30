@@ -48,26 +48,28 @@ Packet::Packet(struct nfq_data *nfa) : stamp_(boost::posix_time::microsec_clock:
     m_nPacketDataLen = nfq_get_payload(m_nfData, (uint8_t**)&orgPktDataPtr_);
     std::memcpy(&m_pPacketData, orgPktDataPtr_, m_nPacketDataLen);
     
-    ifi = nfq_get_indev(m_nfData);
-    if (ifi)
-    {
-        if (if_indextoname(ifi, buf))
-        {
-            m_strInboundInterface.clear();
-            m_strInboundInterface = buf;
-        }
-    }
+	ifi = nfq_get_indev(m_nfData);
+	if (ifi)
+	{
+		if (if_indextoname(ifi, buf))
+		{
+			m_strInboundInterface.clear();
+			m_strInboundInterface = buf;
+		}
+	}
 
-    ifi = nfq_get_outdev(m_nfData);
-    if (ifi)
-    {
-        if (if_indextoname(ifi, buf))
-        {
-            m_strOutboundInterface.clear();
-            m_strOutboundInterface = buf;
-        }
-    }
+	ifi = nfq_get_outdev(m_nfData);
+	if (ifi)
+	{
+		if (if_indextoname(ifi, buf))
+		{
+			m_strOutboundInterface.clear();
+			m_strOutboundInterface = buf;
+		}
+	}
+#ifdef TRACE_LOG
     std::cout << "new packet fron IF: " << m_strInboundInterface << " To: " << m_strOutboundInterface << std::endl;
+#endif
 }
 
 Packet::~Packet()
@@ -106,71 +108,70 @@ ROUTER_STATUS Packet::send()
         ret = S_OK;
     }
 
+	if (ret == S_OK)
+	{
+		// Build packet
 
-    if (ret == S_OK)
-    {
-        // Build packet
-                
-        // Advance pointer past any options headers.
-        unsigned char* pData = (m_pPacketData.data) + this->getPacketHeaderLength() - LIBNET_IPV4_H;
-                
-        ip_ptag = libnet_build_ipv4(
-            LIBNET_IPV4_H + ntohs(m_pPacketData.nPacketLength) - this->getPacketHeaderLength(),                  /* length */
-            m_pPacketData.flagsTOS,         /* TOS */
-            this->getFragmentID(),                  /* IP fragment ID */
-            this->getFragmentFlags(),               /* IP Frag flags*/
-            m_pPacketData.TTL,                              /* TTL */
-            m_pPacketData.nProtocol,                /* protocol */
-            0,                                                              /* checksum (let libnet calculate) */
-            m_pPacketData.srcIP.raw,                /* source IP */
-            m_pPacketData.dstIP.raw,                /* destination IP */
-            pData,                                                  /* payload */
-            ntohs(m_pPacketData.nPacketLength) - this->getPacketHeaderLength(),                                  /* payload size */
-            l,                                                              /* libnet handle */
-            ip_ptag);                                               /* libnet id */
-                        
-                        
-        if (ip_ptag == -1)
-        {
-            fprintf(stderr, "Can't build IP header: %s\n", libnet_geterror(l));
-            ret = E_FAILED;
-        }
-        else
-        {
-            ret = S_OK;
-        }
-                
-        // TODO: Add IP options (if any)
-                
-        
-        if (ret == S_OK)
-        {
-            // Write to network
-                        
-            count = libnet_write(l);
-            if (count == -1)
-            {
-                fprintf(stderr, "Write error: %s\n", libnet_geterror(l));
-                ret = E_FAILED;
-            }
-            else
-            {
-                //      fprintf(stderr, "Wrote %d byte IP packet\n", count);
-                ret = S_OK;
+		// Advance pointer past any options headers.
+		unsigned char* pData = (m_pPacketData.data) + this->getPacketHeaderLength() - LIBNET_IPV4_H;
 
-            }
-        }
-                
-        
-        libnet_destroy(l);
-    }
+		ip_ptag = libnet_build_ipv4(
+			LIBNET_IPV4_H + ntohs(m_pPacketData.nPacketLength) - this->getPacketHeaderLength(),                  /* length */
+			m_pPacketData.flagsTOS,		/* TOS */
+			this->getFragmentID(),			/* IP fragment ID */
+			this->getFragmentFlags(),		/* IP Frag flags*/
+			m_pPacketData.TTL,				/* TTL */
+			m_pPacketData.nProtocol,		/* protocol */
+			0,								/* checksum (let libnet calculate) */
+			m_pPacketData.srcIP.raw,		/* source IP */
+			m_pPacketData.dstIP.raw,		/* destination IP */
+			pData,							/* payload */
+			ntohs(m_pPacketData.nPacketLength) - this->getPacketHeaderLength(),                                  /* payload size */
+			l,								/* libnet handle */
+			ip_ptag);						/* libnet id */
+
+
+		if (ip_ptag == -1)
+		{
+			fprintf(stderr, "Can't build IP header: %s\n", libnet_geterror(l));
+			ret = E_FAILED;
+		}
+		else
+		{
+			ret = S_OK;
+		}
+
+		// TODO: Add IP options (if any)
+
+		if (ret == S_OK)
+		{
+			// Write to network
+
+			count = libnet_write(l);
+			if (count == -1)
+			{
+				fprintf(stderr, "Write error: %s\n", libnet_geterror(l));
+				ret = E_FAILED;
+			}
+			else
+			{
+                //	fprintf(stderr, "Wrote %d byte IP packet\n", count);
+				ret = S_OK;
+			}
+		}
+
+
+		libnet_destroy(l);
+	}
+#ifdef TRACE_LOG
     if (ret == S_OK){
         std::cout << "Packet sent successfully" << std::endl;
     }
     else {
         std::cout << "Packet sent FAILED" << std::endl;
     }
-    return ret;
+#endif
+	return ret;
 }
 
 

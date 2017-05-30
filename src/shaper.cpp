@@ -13,13 +13,17 @@ StaticDelay::~StaticDelay(){
 }
 
 void StaticDelay::handlePacket(Packet pkt){
-    std::cout << std::endl << "shaping packet" << std::endl;
+#ifdef TRACE_LOG
+    std::cout << std::endl << "Delay Filter" << std::endl;
+#endif
     boost::posix_time::time_duration delay;
     {
         std::lock_guard<std::mutex> lock(mutex_);
         queue_.push(pkt);
+#ifdef TRACE_LOG
         std::cout << "pushed to queue, Size: " << queue_.size() << std::endl;
         pkt.dump();
+#endif
         if(queue_.size() > 1){
             return;
         }
@@ -34,27 +38,29 @@ void StaticDelay::handlePacket(Packet pkt){
     queueTimeEvent();
     //next_->handlePacket(pkt);
     return;*/
+#ifdef TRACE_LOG
     std::cout << "handlepacket making delay of: " << boost::posix_time::to_iso_string(delay) << std::endl;
     std::cout << "time is now: " << boost::posix_time::to_simple_string(boost::posix_time::microsec_clock::local_time()) << std::endl;
+#endif
     std::shared_ptr<boost::asio::deadline_timer> t = std::make_shared<boost::asio::deadline_timer>(*ioService_, delay);
     auto self = shared_from_this();
     std::function< void (void)> f = [self, t] (void) {
-        std::cout << "lambda function triggered" << std::endl;
         self->queueTimeEvent();
     };
     t->async_wait(boost::bind(f));
-    std::cout << "shaper returning async" << std::endl;
 }
 
 void StaticDelay::queueTimeEvent(){
     std::lock_guard<std::mutex> lock(mutex_);
+#ifdef TRACE_LOG
     std::cout << "queueTimeEvent triggered at: " << boost::posix_time::to_simple_string(boost::posix_time::microsec_clock::local_time()) << std::endl;
 //    std::cout << "queueTimeEvent using front packet ID: " << queue_.front().getNetfilterID() << std::endl;
     if(queue_.size() == 0){
         std::cout << "tried to access empty queue" << std::endl;
     }
-    Packet pkt = queue_.front();
 //    pkt.dump();
+#endif
+    Packet pkt = queue_.front();
     pkt.resetTimeStamp();
     next_->handlePacket(pkt);
     queue_.pop();
@@ -66,15 +72,15 @@ void StaticDelay::queueTimeEvent(){
             delay = boost::posix_time::milliseconds(0);
         }
     
+#ifdef TRACE_LOG
         std::cout << "queueTimeEvent making delay of: " << boost::posix_time::to_iso_string(delay) << std::endl;
+#endif
         std::shared_ptr<boost::asio::deadline_timer> t = std::make_shared<boost::asio::deadline_timer>(*ioService_, delay);
         auto self = shared_from_this();
         std::function< void (void)> f = [self, t] (void) {
-            std::cout << "lambda function triggered" << std::endl;
             self->queueTimeEvent();
         };
         t->async_wait(boost::bind(f));
-        std::cout << "queueTimeEvent returning async" << std::endl;
     }
 //    std::cout << "queueTimeEvent popped front now has packet ID: " << queue_.front().getNetfilterID() << std::endl;
 

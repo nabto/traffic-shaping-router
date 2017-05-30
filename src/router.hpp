@@ -21,13 +21,17 @@ class Router : public Filter
     bool execute();
     int newPacket(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, void *data);
     void handlePacket(Packet pkt);
+    void setDelay(int del){delayMs_ = del;}
+    void setLoss(float loss){lossProb_ = loss;}
+    
  private:
     std::mutex nextMutex_;
-    int id_;
     std::vector<Packet> packets_;
     std::shared_ptr<Filter> delay_;
     std::shared_ptr<Filter> loss_;
     std::shared_ptr<Filter> nat_;
+    int delayMs_;
+    float lossProb_;
     //Shaper shaper_;
     //Nat nat_;
 };
