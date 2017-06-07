@@ -43,22 +43,22 @@ Nat::Nat(std::string ifOut){
     std::cout << "IP of " << ifOut_ << " is " << inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr) << " or in uint32: " << ipOut_ << std::endl;
 }
 Nat::~Nat(){}
-void Nat::handlePacket(Packet pkt) {
-    if(pkt.getProtocol() == PROTO_ICMP){
+void Nat::handlePacket(PacketPtr pkt) {
+    if(pkt->getProtocol() == PROTO_ICMP){
         next_->handlePacket(pkt);
         return;
     }
-    if(pkt.getSourceIP() == dnatIp_) { 
+    if(pkt->getSourceIP() == dnatIp_) { 
         std::cout << "setting srcIp to " << ipOut_ << std::endl;
-        pkt.setSourceIP(ipOut_);
+        pkt->setSourceIP(ipOut_);
     } else {
         std::cout << "setting dstIp to " << dnatIp_ << std::endl;
-        pkt.setDestinationIP(dnatIp_);
-        pkt.setOutboundInterface("eth1");
+        pkt->setDestinationIP(dnatIp_);
+        pkt->setOutboundInterface("eth1");
 
     }
     next_->handlePacket(pkt);
     std::cout << "nat dumping pkt" << std::endl;
-    pkt.dump();
+    pkt->dump();
 }
 

@@ -40,7 +40,7 @@ void Router::init(){
 Router::~Router(){
 }
 
-void Router::handlePacket(Packet pkt){
+void Router::handlePacket(PacketPtr pkt){
     std::cout << "Router sending packet" << std::endl;
     struct timeval stop;
     struct timeval start = time_[0];
@@ -52,7 +52,7 @@ void Router::handlePacket(Packet pkt){
 
 int Router::newPacket(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, void *data)
 {
-    Packet pkt;
+    PacketPtr pkt = std::make_shared<Packet>();
     std::cout << "starting timer" << std::endl;
     struct timeval start;
     gettimeofday(&start, NULL);

@@ -13,7 +13,7 @@ StaticDelay::StaticDelay(int delay) {
 StaticDelay::~StaticDelay() {
 }
 
-void StaticDelay::handlePacket(Packet pkt) {
+void StaticDelay::handlePacket(PacketPtr pkt) {
     {
         std::lock_guard<std::mutex> lock(mutex_);
         queue_.push(pkt);
@@ -29,9 +29,9 @@ void StaticDelay::handlePacket(Packet pkt) {
 void StaticDelay::queueTimeEvent() {
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        Packet pkt = queue_.front();
+        PacketPtr pkt = queue_.front();
         // resetting time stamp in case of more delay filters
-        pkt.resetTimeStamp();
+        pkt->resetTimeStamp();
         next_->handlePacket(pkt);
         queue_.pop();
         if(queue_.size() < 1){
@@ -46,7 +46,7 @@ void StaticDelay::scheduleEvent() {
     boost::posix_time::ptime now(boost::posix_time::microsec_clock::local_time());
     std::lock_guard<std::mutex> lock(mutex_);
 
-    delay = delay_ - (now - queue_.front().getTimeStamp());
+    delay = delay_ - (now - queue_.front()->getTimeStamp());
     if (delay < boost::posix_time::milliseconds(0)){
         delay = boost::posix_time::milliseconds(0);
     }
@@ -67,7 +67,7 @@ Loss::Loss(float loss) {
 Loss::~Loss() {
 }
 
-void Loss::handlePacket(Packet pkt) {
+void Loss::handlePacket(PacketPtr pkt) {
     float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
     if (r < loss_){
         return;

@@ -48,6 +48,9 @@ typedef struct _rawPacket
     unsigned char data[1500];
 } rawPacket;
 
+class Packet;
+typedef std::shared_ptr<Packet> PacketPtr;
+
 class Packet
 {
  public:

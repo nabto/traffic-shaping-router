@@ -7,7 +7,7 @@
 class Filter : public std::enable_shared_from_this<Filter>{
  public:
     virtual void setNext(std::shared_ptr<Filter> next){next_ = next;}
-    virtual void handlePacket(Packet pkt) = 0;
+    virtual void handlePacket(PacketPtr pkt) = 0;
  protected:
 //    Filter* next_;
     std::shared_ptr<Filter> next_;

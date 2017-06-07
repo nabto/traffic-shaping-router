@@ -19,7 +19,7 @@ class StaticDelay : public Filter
  public:
     StaticDelay(int delay);
     ~StaticDelay();
-    void handlePacket(Packet pkt);
+    void handlePacket(PacketPtr pkt);
     void queueTimeEvent();
 
  private:
@@ -27,7 +27,7 @@ class StaticDelay : public Filter
     boost::posix_time::time_duration delay_;
     std::shared_ptr<TpService>  tp_;
     std::mutex mutex_;
-    std::queue<Packet> queue_;
+    std::queue<PacketPtr> queue_;
     boost::asio::io_service* ioService_;
 };
 
@@ -36,7 +36,7 @@ class Loss : public Filter
  public:
     Loss(float loss);
     ~Loss();
-    void handlePacket(Packet pkt);
+    void handlePacket(PacketPtr pkt);
 
  private:
     float loss_;

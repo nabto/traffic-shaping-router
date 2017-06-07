@@ -20,7 +20,7 @@ class Router : public Filter
     void init();
     bool execute();
     int newPacket(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, void *data);
-    void handlePacket(Packet pkt);
+    void handlePacket(PacketPtr pkt);
     void setDelay(int del){delayMs_ = del;}
     void setLoss(float loss){lossProb_ = loss;}
     void setOutIf(std::string ifOut){ifOut_ = ifOut;}

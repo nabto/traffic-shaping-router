@@ -9,7 +9,7 @@ class Nat : public Filter
  public:
     Nat(std::string ifOut);
     ~Nat();
-    void handlePacket(Packet pkt);
+    void handlePacket(PacketPtr pkt);
 
  private:
     std::string ifOut_;
