@@ -17,6 +17,8 @@ services:
     build: ../ping_node
     command: tail -f /dev/null
     privileged: true
+    dns:
+      - 8.8.8.8
     volumes:
       - ./data:/data
     networks:

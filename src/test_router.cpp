@@ -27,9 +27,9 @@ Router::Router(){
 
 void Router::init(){
     auto self = shared_from_this();
-    nat_ = std::make_shared<Nat>();
+    nat_ = std::make_shared<Nat>("eth0");
     delay_ = std::make_shared<StaticDelay>(100);
-    loss_ = std::make_shared<Loss>(0.1);
+    loss_ = std::make_shared<Loss>(0);
     setNext(loss_);
     loss_->setNext(nat_);
     nat_->setNext(delay_);

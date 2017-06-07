@@ -27,7 +27,7 @@ Router::Router() {
 void Router::init() {
     auto self = shared_from_this();
     loss_ = std::make_shared<Loss>(lossProb_);
-    nat_ = std::make_shared<Nat>();
+    nat_ = std::make_shared<Nat>(ifOut_);
     delay_ = std::make_shared<StaticDelay>(delayMs_);
     setNext(loss_);
     loss_->setNext(nat_);
@@ -40,14 +40,27 @@ Router::~Router() {
 }
 
 void Router::handlePacket(Packet pkt) {
-    pkt.send();
+    std::cout << " ======= SENDING PACKET ======== " << std::endl;
+    ROUTER_STATUS ret = pkt.send();
+    if(ret == E_FAILED){
+        std::cout << "send pkt failed" << std::endl;
+    } else if (ret == S_OK) {
+        std::cout << "send pkt OK" << std::endl;
+    } else {
+        std::cout << "send pkt invalid return" << std::endl;
+    }
+    std::cout << " ======= PACKET SENT ======== " << std::endl;
+    
 }
 
 int Router::newPacket(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, void *data)
 {
+    std::cout << " ======= new packet ======== " << std::endl;
     Packet pkt(nfa);
+    pkt.dump();
     int ret = nfq_set_verdict(qh, pkt.getNetfilterID(), NF_DROP, 0, NULL);
     next_->handlePacket(pkt);
+    std::cout << " ======= RETURNING ASYNC ======= " << std::endl;
     return ret;
 }
 

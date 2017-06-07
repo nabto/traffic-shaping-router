@@ -23,6 +23,7 @@ class Router : public Filter
     void handlePacket(Packet pkt);
     void setDelay(int del){delayMs_ = del;}
     void setLoss(float loss){lossProb_ = loss;}
+    void setOutIf(std::string ifOut){ifOut_ = ifOut;}
     
  private:
     std::vector<Packet> packets_;
@@ -31,6 +32,7 @@ class Router : public Filter
     std::shared_ptr<Filter> nat_;
     int delayMs_;
     float lossProb_;
+    std::string ifOut_;
 };
 
 #endif // ROUTER_HPP

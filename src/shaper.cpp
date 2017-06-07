@@ -34,10 +34,11 @@ void StaticDelay::queueTimeEvent() {
         pkt.resetTimeStamp();
         next_->handlePacket(pkt);
         queue_.pop();
+        if(queue_.size() < 1){
+            return;
+        }
     }
-    if(queue_.size() > 0){
-        scheduleEvent();
-    }
+    scheduleEvent();
 }
 
 void StaticDelay::scheduleEvent() {
