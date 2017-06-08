@@ -10,7 +10,7 @@
 #include "packet.hpp"
 
 #include <netinet/udp.h>
-//#include <netinet/tcp.h>
+#include <netinet/ip.h>
 #include <linux/tcp.h>
 
 
@@ -22,10 +22,11 @@ Packet::Packet(struct nfq_data *nfa) : stamp_(boost::posix_time::microsec_clock:
     rawPacket* orgPktDataPtr;
     
     struct nfqnl_msg_packet_hdr *orgPktHead = nfq_get_msg_packet_hdr(nfData);
-    std::memcpy(&ph_,orgPktHead,sizeof(struct nfqnl_msg_packet_hdr));
+    nfqID_ = ntohl(orgPktHead->packet_id);
     packetDataLen_ = nfq_get_payload(nfData, (uint8_t**)&orgPktDataPtr);
-    std::memcpy(&packetData_, orgPktDataPtr, packetDataLen_);
-    
+    packetData_.clear();
+//    packetData_.insert(packetData_.begin(),(uint8_t*)orgPktDataPtr,packetDataLen_);
+    std::copy((uint8_t*)orgPktDataPtr, (uint8_t*)orgPktDataPtr + packetDataLen_, std::back_inserter(packetData_));
     
 	ifi = nfq_get_indev(nfData);
 	if (ifi) {
@@ -42,20 +43,32 @@ Packet::Packet(struct nfq_data *nfa) : stamp_(boost::posix_time::microsec_clock:
 			strOutboundInterface_ = buf;
 		}
 	}
-    uint16_t * ptr = (uint16_t*)((packetData_.data));
-    sport_ = ntohs(*ptr);
-    dport_ = ntohs(*(ptr+1));
 
-    if (getProtocol() == PROTO_TCP){
+    iphdr* ip = (iphdr*)packetData_.data();
+    ipLen_ = ntohs(ip->tot_len);
+    ipTos_ = ip->tos;
+    ipId_ = ntohs(ip->id);
+    ipFrag_ = ntohs(ip->frag_off);
+    ipTtl_ = ip->ttl;
+    ipProt_ = ip->protocol;
+    ipSrc_ = ntohl(ip->saddr);
+    ipDst_ = ntohl(ip->daddr);
+    ipHdrLen_ = ip->ihl << 2;
+    
+    if (ipProt_ == PROTO_UDP){
+        udphdr* udp = (udphdr*)(packetData_.data()+ipHdrLen_);
+        sport_ = ntohs(udp->uh_sport);
+        dport_ = ntohs(udp->uh_dport);
+        transLen_ = ntohs(udp->uh_ulen);
+    } else if (ipProt_ == PROTO_TCP){
 #ifdef TRACE_LOG
         std::cout << "Dumping entire TCP packet" << std::endl;
         dumpMem((uint8_t*)&packetData_, packetDataLen_);
 #endif
-        tcphdr* tcp = (tcphdr *)((packetData_.data));
-        len_ = packetDataLen_;
+        tcphdr* tcp = (tcphdr *)((packetData_.data()+ipHdrLen_));
+        transLen_ = packetDataLen_;
 
         urg_ = ntohs(tcp->urg_ptr);
-        tcpSum_ = 0;
         win_ = ntohs(tcp->window);
         control_ = tcp->fin | (tcp->syn << 1) | (tcp->rst << 2) | (tcp->psh << 3) | (tcp->ack << 4) | (tcp->urg << 5) | (tcp->ece << 6) | (tcp->cwr << 7);
         ack_ = ntohl(tcp->ack_seq);
@@ -64,54 +77,43 @@ Packet::Packet(struct nfq_data *nfa) : stamp_(boost::posix_time::microsec_clock:
         sport_ = ntohs(tcp->source);
         tcpOptionsSize_ = (tcp->doff << 2) - 20;
         
-        tcpPayloadSize_ = packetDataLen_ - getPacketHeaderLength() - 20 - tcpOptionsSize_;
-        tcpPayload_ = (uint8_t*)&packetData_ +  getPacketHeaderLength() + 20 + tcpOptionsSize_;
+        tcpPayloadSize_ = packetDataLen_ - ipHdrLen_ - 20 - tcpOptionsSize_;
+        tcpPayload_ = (uint8_t*)tcp + 20 + tcpOptionsSize_;
 
-        tcpOptions_ = (uint8_t*)&packetData_ +  getPacketHeaderLength() + 20;
+        tcpOptions_ = (uint8_t*)tcp + 20;
 
 #ifdef TRACE_LOG
-        std::cout << "TCP DATA:\n\ttcpPayloadSize_ " << tcpPayloadSize_ << "\n\tlen: " << len_ << "\n\turg: " << urg_ << "\n\tsum: " << tcpSum_ << "\n\twin: " << win_ << "\n\tcontrol: " << unsigned(control_) << "\n\tack: " << ack_  << "\n\tseq: " << seq_ << "\n\tdport: " << dport_ << "\n\tsport: " << sport_  << "\n\tOptSize: " << unsigned(tcpOptionsSize_) << "\n\tOpt: ";
+        std::cout << "TCP DATA:\n\ttcpPayloadSize_ " << tcpPayloadSize_ << "\n\tlen: " << transLen_ << "\n\turg: " << urg_ << "\n\twin: " << win_ << "\n\tcontrol: " << unsigned(control_) << "\n\tack: " << ack_  << "\n\tseq: " << seq_ << "\n\tdport: " << dport_ << "\n\tsport: " << sport_  << "\n\tOptSize: " << unsigned(tcpOptionsSize_) << "\n\tOpt: ";
         for (int i = 0; i<tcpOptionsSize_; i++){
             std::cout << unsigned(tcpOptions_[i]) << " ";
         }
         std::cout << std::endl;
 #endif
+    } else if (ipProt_ == PROTO_ICMP){
+        transLen_ = ipLen_ - ipHdrLen_;
+    } else {
+        // unknown protocol passing it raw, but NAT should drop it
+        transLen_ = ipLen_ - ipHdrLen_;
     }
-
 }
 
 // Dummy packet for testing purposes
 Packet::Packet() : stamp_(boost::posix_time::microsec_clock::local_time()) {
-    packetData_.nVersionLength = 2;
-    packetData_.flagsTOS = 0;
-    packetData_.nPacketLength = 100;
-    packetData_.nFragmentID = 3;
-    packetData_.nFragFlagsOffset = 0;
-    packetData_.TTL = 55;
-    packetData_.nProtocol = PROTO_TCP;
-    packetData_.nHeaderChecksum = 0;
-    packetData_.srcIP.raw = 202;
-    packetData_.srcIP.octet[0] = 65;
-    packetData_.srcIP.octet[1] = 65;
-    packetData_.srcIP.octet[2] = 65;
-    packetData_.srcIP.octet[3] = 65;
-    packetData_.dstIP.raw = 202;
-    packetData_.dstIP.octet[0] = 65;
-    packetData_.dstIP.octet[1] = 65;
-    packetData_.dstIP.octet[2] = 65;
-    packetData_.dstIP.octet[3] = 65;
-    ph_.packet_id = 5;
+    ipLen_ = 5;
+    ipTos_ = 0;
+    ipId_ = 3;
+    ipFrag_ = 5;
+    ipTtl_ = 55;
+    ipProt_ = PROTO_TCP;
+    ipSrc_ = 33685514;
+    ipDst_ = 33559212;
+    ipHdrLen_ = 20;
+    nfqID_ = 5;
     strInboundInterface_ = "eth8";
     strOutboundInterface_ = "eth9";
 }
 
 Packet::~Packet() {
-}
-
-const int Packet::getNetfilterID() const {
-    int id = 0;
-    id = ntohl(ph_.packet_id);
-    return id;
 }
 
 ROUTER_STATUS Packet::send() {
@@ -133,31 +135,28 @@ ROUTER_STATUS Packet::send() {
     if (ret == S_OK) {
         // Build packet
         // Advance pointer past any options headers.
-        unsigned char* pData = (packetData_.data);
-        uint32_t size = ntohs(packetData_.nPacketLength) - this->getPacketHeaderLength();
+        unsigned char* pData = (packetData_.data()+ipHdrLen_);
+        uint32_t size = transLen_;
         if (this->getProtocol() == PROTO_ICMP) {
         } else if (this->getProtocol() == PROTO_UDP) {
-            //udphdr* p2 = (udphdr *)((packetData_.data) + this->getPacketHeaderLength() - LIBNET_IPV4_H);
             int checkerr = libnet_build_udp(
                 sport_,
                 dport_,
-                packetDataLen_-getPacketHeaderLength(),
+                transLen_,
                 0,
-                pData+8,
-                packetDataLen_-getPacketHeaderLength()- 8,
+                packetData_.data()+ipHdrLen_+8,
+                transLen_- 8,
                 l,
                 0);
             if (checkerr == -1) {
-                printf("Error building UDP header: %s\n", libnet_geterror(l));
+                std::cout << "Error building UDP header: " << libnet_geterror(l) << std::endl;
                 libnet_destroy(l);
                 return E_FAILED;
             }            
-            size = 0;
             pData = NULL;
+            size = 0;
 
         } else if (this->getProtocol() == PROTO_TCP) {
-            //tcphdr* tcp = (tcphdr *)((packetData_.data) + this->getPacketHeaderLength() - LIBNET_IPV4_H);
-            size = ntohs(packetData_.nPacketLength)- getPacketHeaderLength()-20;
             // build tcp header 
 
             if (tcpPayloadSize_ == 0){
@@ -165,7 +164,7 @@ ROUTER_STATUS Packet::send() {
             }
             
 #ifdef TRACE_LOG
-            std::cout << "TCP hdr len: " << size << std::endl;
+            std::cout << "dumpint tcp options: " << std::endl;
             dumpMem((uint8_t *)tcpOptions_, tcpOptionsSize_);
 #endif
             int checkerr = libnet_build_tcp_options(
@@ -189,7 +188,7 @@ ROUTER_STATUS Packet::send() {
                 win_,
                 0,
                 urg_,
-                getPacketHeaderLength()+20+tcpOptionsSize_+tcpPayloadSize_,//len_,
+                ipHdrLen_+20+tcpOptionsSize_+tcpPayloadSize_,//len_,
                 tcpPayload_,
                 tcpPayloadSize_,
                 l,
@@ -201,7 +200,7 @@ ROUTER_STATUS Packet::send() {
             }
 
             
-            pData = NULL; //((uint8_t *)tcp)+20;
+            pData = NULL;
             size = 0;
             
         } else {
@@ -211,18 +210,18 @@ ROUTER_STATUS Packet::send() {
         }
 
 #ifdef TRACE_LOG
-        std::cout << "ip size: " << size << " sending to ip " << ntohl(packetData_.dstIP.raw) << " from " << ntohl(packetData_.srcIP.raw) << std::endl;
+        std::cout << "ip size: " << size << " sending to ip " << ipDst_ << " from " << ipSrc_ << std::endl;
 #endif
         ip_ptag = libnet_build_ipv4(
-            LIBNET_IPV4_H + ntohs(packetData_.nPacketLength) - this->getPacketHeaderLength(), /* length */
-            packetData_.flagsTOS,	  /* TOS */
+            ipLen_, /* length */
+            ipTos_,	  /* TOS */
             this->getFragmentID(),    /* IP fragment ID */
             this->getFragmentFlags(), /* IP Frag flags*/
-            packetData_.TTL,        /* TTL */
-            packetData_.nProtocol,  /* protocol */
+            ipTtl_,        /* TTL */
+            ipProt_,  /* protocol */
             0,                        /* checksum (let libnet calculate) */
-            packetData_.srcIP.raw,  /* source IP */
-            packetData_.dstIP.raw,  /* destination IP */
+            htonl(ipSrc_),  /* source IP */
+            htonl(ipDst_),  /* destination IP */
             pData,                    /* payload */
             size, /* payload size */
             l,                        /* libnet handle */
@@ -264,49 +263,33 @@ void Packet::dump() {
     printf("\ttime stamp was: %s\n", boost::posix_time::to_simple_string(stamp_).c_str());
 
     // TODO: these two printfs will break if Network order != Host order
-    printf("\tSource IP raw: %u\n", packetData_.srcIP.raw);
-    printf("\tSource IP: %d.%d.%d.%d\n",
-           packetData_.srcIP.octet[0],
-           packetData_.srcIP.octet[1],
-           packetData_.srcIP.octet[2],
-           packetData_.srcIP.octet[3]);
+    printf("\tSource IP raw: %u\n", ipSrc_);
+    printf("\tSource IP: %u.%u.%u.%u\n",
+           ipSrc_ >> 24,
+           (ipSrc_ >> 16) & 0xFF,
+           (ipSrc_ >> 8) & 0xFF,
+           ipSrc_ & 0xFF);
 
-    printf("\tDestination IP raw: %u\n", packetData_.dstIP.raw);
-    printf("\tDestination IP: %d.%d.%d.%d\n",
-           packetData_.dstIP.octet[0],
-           packetData_.dstIP.octet[1],
-           packetData_.dstIP.octet[2],
-           packetData_.dstIP.octet[3]);
+    printf("\tDestination IP raw: %u\n", ipDst_);
+    printf("\tDestination IP: %u.%u.%u.%u\n",
+           ipDst_ >> 24,
+           (ipDst_ >> 16) & 0xFF,
+           (ipDst_ >> 8) & 0xFF,
+           ipDst_ & 0xFF);
 
     if (this->getProtocol() == PROTO_ICMP) {
         printf("\tICMP Packet\n");
     } else if (this->getProtocol() == PROTO_UDP) {
-        uint16_t* pData = (uint16_t *)((packetData_.data) + this->getPacketHeaderLength() - LIBNET_IPV4_H);
-
-        printf("\tUDP Source Port: %d\n",ntohs(*pData));
-        printf("\tUDP Destination Port: %d\n",ntohs(*(pData+1)));
-
-        udphdr* p2 = (udphdr *)((packetData_.data) + this->getPacketHeaderLength() - LIBNET_IPV4_H);
-        
-        printf("\tHeader srcPort: %d\n",ntohs(p2->uh_sport)); 
-        printf("\tHeader dstPort: %d\n",ntohs(p2->uh_dport)); 
-        printf("\tHeader len: %d\n",ntohs(p2->uh_ulen)); 
-        printf("\tHeader sum: %d\n",ntohs(p2->uh_sum)); 
+        printf("\tUDP Source Port: %u\n",sport_);
+        printf("\tUDP Destination Port: %u\n",dport_);
+        printf("\tHeader len: %u\n",transLen_); 
 
     } else if (this->getProtocol() == PROTO_TCP) {
-        uint16_t* pData = (uint16_t *)((packetData_.data) + this->getPacketHeaderLength() - LIBNET_IPV4_H);
-
-        printf("\tTCP Source Port: %d\n",ntohs(*pData));
-        printf("\tTCP Destination Port: %d\n",ntohs(*(pData+1)));
-
-        // tcphdr* p2 = (tcphdr *)((packetData_.data) + this->getPacketHeaderLength() - LIBNET_IPV4_H);
-        
-        // printf("\tHeader srcPort: %d\n",ntohs(p2->th_sport)); 
-        // printf("\tHeader dstPort: %d\n",ntohs(p2->th_dport)); 
-        // printf("\tHeader seq: %d\n",ntohs(p2->th_seq)); 
-        // printf("\tHeader ack: %d\n",ntohs(p2->th_ack)); 
-        // printf("\tHeader win: %d\n",ntohs(p2->th_win)); 
-        // printf("\tHeader sum: %d\n",ntohs(p2->th_sum)); 
+        printf("\tTCP Source Port: %d\n",sport_);
+        printf("\tTCP Destination Port: %d\n",dport_);
+        printf("\tHeader seq: %u\n",seq_); 
+        printf("\tHeader ack: %u\n",ack_); 
+        printf("\tHeader win: %u\n",win_); 
 
     } else {
         printf("\tUnknown Protocol\n");
@@ -314,34 +297,28 @@ void Packet::dump() {
 }
 
 
+const int Packet::getNetfilterID() const {
+    return nfqID_;
+}
+
 const uint8_t Packet::getProtocol() const {
-    return packetData_.nProtocol;
+    return ipProt_;
 }
 
 const uint32_t Packet::getSourceIP() const {
-    return ntohl(packetData_.srcIP.raw);
+    return ipSrc_;
 }
 
 void Packet::setSourceIP(uint32_t ip) {
-    packetData_.srcIP.raw = ip;
-    packetData_.srcIP.octet[0] = ip >> 24;
-    packetData_.srcIP.octet[1] = (ip >> 16) & 0xFF;
-    packetData_.srcIP.octet[2] = (ip >> 8) & 0xFF;
-    packetData_.srcIP.octet[3] = ip & 0xFF;
-    
+    ipSrc_ = ip;
 }
 
 void Packet::setDestinationIP(uint32_t ip) {
-    packetData_.dstIP.raw = ip;
-    packetData_.dstIP.octet[0] = ip >> 24;
-    packetData_.dstIP.octet[1] = (ip >> 16) & 0xFF;
-    packetData_.dstIP.octet[2] = (ip >> 8) & 0xFF;
-    packetData_.dstIP.octet[3] = ip & 0xFF;
-    
+    ipDst_ = ip;
 }
 
 const uint32_t Packet::getDestinationIP() const {
-    return ntohl(packetData_.dstIP.raw);
+    return ipDst_;
 }
 
 void Packet::getInboundInterface(std::string & in) const {
@@ -357,17 +334,11 @@ void Packet::setOutboundInterface(const std::string & out) {
 }
 
 const uint16_t Packet::getFragmentFlags() const {
-    uint16_t data = ntohs(packetData_.nFragFlagsOffset);
-    return data & 0xE000;
+    return ipFrag_ & 0xE000;
 }
 
 const uint16_t Packet::getFragmentID() const {
-    uint16_t data = ntohs(packetData_.nFragFlagsOffset);
-    return data & 0x1FFF;  // mask out first 3 bits 
-}
-
-inline short Packet::getPacketHeaderLength() const {
-    return (packetData_.nVersionLength & 0x0F) << 2;
+    return ipFrag_ & 0x1FFF;  // mask out first 3 bits 
 }
 
 void Packet::dumpMem(unsigned char* p,int len) {

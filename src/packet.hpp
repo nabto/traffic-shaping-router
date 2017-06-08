@@ -83,48 +83,40 @@ class Packet
 
  protected:
     boost::posix_time::ptime stamp_;
-    rawPacket packetData_;
+    std::vector<uint8_t> packetData_;
     std::string	strInboundInterface_;
     std::string	strOutboundInterface_;
     int packetDataLen_;
-    struct nfqnl_msg_packet_hdr ph_;
-
+    int nfqID_;
     
-
     // ==== IP PARAMETERS ====
     uint16_t ipLen_;
-    uint8_t	 tos_;
-    uint16_t id_;
-    uint16_t frag_;
-    uint8_t ttl_;
-    uint8_t prot_;
-    uint16_t sum_;
-    uint32_t src_;
-    uint32_t dst_;
+    uint8_t	 ipTos_;
+    uint16_t ipId_;
+    uint16_t ipFrag_;
+    uint8_t  ipTtl_;
+    uint8_t  ipProt_;
+    uint32_t ipSrc_;
+    uint32_t ipDst_;
+    uint8_t  ipHdrLen_;
 
-    //libnet_ptag_t libnet_build_tcp (uint16_t sp, uint16_t dp, uint32_t seq, uint32_t
-    //ack, uint8_t control, uint16_t win, uint16_t sum, uint16_t urg, uint16_t len,
-    //const uint8_t *payload, uint32_t payload_s, libnet_t *l, libnet_ptag_t ptag)
- 
+    // ==== TRANSPORT PARAMETERS ====
     uint16_t sport_;
     uint16_t dport_;
+    uint16_t transLen_;
 
-    // ==== TCP PARAMETERS ====
+    // -- TCP PARAMETERS --
     uint32_t seq_;
     uint32_t ack_;
     uint8_t control_;
     uint16_t win_;
-    uint16_t tcpSum_;
     uint16_t urg_;
-    uint16_t len_;
     const uint8_t * tcpPayload_;
     uint32_t tcpPayloadSize_;
     uint8_t tcpOptionsSize_;
     uint8_t * tcpOptions_;
  private:
     void dumpMem(unsigned char* p,int len);
-    short getPacketHeaderLength() const;
-
 };
 
 #endif
