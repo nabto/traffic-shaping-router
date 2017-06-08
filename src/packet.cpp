@@ -47,7 +47,10 @@ Packet::Packet(struct nfq_data *nfa) : stamp_(boost::posix_time::microsec_clock:
     dport_ = ntohs(*(ptr+1));
 
     if (getProtocol() == PROTO_TCP){
+#ifdef TRACE_LOG
+        std::cout << "Dumping entire TCP packet" << std::endl;
         dumpMem((uint8_t*)&packetData_, packetDataLen_);
+#endif
         tcphdr* tcp = (tcphdr *)((packetData_.data));
         len_ = packetDataLen_;
 
@@ -61,26 +64,18 @@ Packet::Packet(struct nfq_data *nfa) : stamp_(boost::posix_time::microsec_clock:
         sport_ = ntohs(tcp->source);
         tcpOptionsSize_ = (tcp->doff << 2) - 20;
         
-        // urg_ = ntohs(tcp->th_urp);
-        // tcpSum_ = 0;
-        // win_ = ntohs(tcp->th_win);
-        // control_ = ntohs(tcp->th_flags);
-        // ack_ = ntohs(tcp->th_ack);
-        // seq_ = ntohs(tcp->th_seq);
-        // dport_ = ntohs(tcp->th_dport);
-        // sport_ = ntohs(tcp->th_sport);
-        // tcpOptionsSize_ = ntohs(tcp->th_off);
-
         tcpPayloadSize_ = packetDataLen_ - getPacketHeaderLength() - 20 - tcpOptionsSize_;
         tcpPayload_ = (uint8_t*)&packetData_ +  getPacketHeaderLength() + 20 + tcpOptionsSize_;
 
         tcpOptions_ = (uint8_t*)&packetData_ +  getPacketHeaderLength() + 20;
 
+#ifdef TRACE_LOG
         std::cout << "TCP DATA:\n\ttcpPayloadSize_ " << tcpPayloadSize_ << "\n\tlen: " << len_ << "\n\turg: " << urg_ << "\n\tsum: " << tcpSum_ << "\n\twin: " << win_ << "\n\tcontrol: " << unsigned(control_) << "\n\tack: " << ack_  << "\n\tseq: " << seq_ << "\n\tdport: " << dport_ << "\n\tsport: " << sport_  << "\n\tOptSize: " << unsigned(tcpOptionsSize_) << "\n\tOpt: ";
         for (int i = 0; i<tcpOptionsSize_; i++){
             std::cout << unsigned(tcpOptions_[i]) << " ";
         }
         std::cout << std::endl;
+#endif
     }
 
 }
@@ -169,16 +164,18 @@ ROUTER_STATUS Packet::send() {
                 tcpPayload_ = NULL;
             }
             
+#ifdef TRACE_LOG
             std::cout << "TCP hdr len: " << size << std::endl;
             dumpMem((uint8_t *)tcpOptions_, tcpOptionsSize_);
+#endif
             int checkerr = libnet_build_tcp_options(
                 tcpOptions_,
                 tcpOptionsSize_,
                 l,
                 0);
-            std::cout << "checkerr: " << checkerr << std::endl;
+
             if (checkerr == -1) {
-                printf("Error building TCP Options: %s\n", libnet_geterror(l));
+                std::cout << "Error building TCP Options: " << libnet_geterror(l) << std::endl;
                 libnet_destroy(l);
                 return E_FAILED;
             }
@@ -197,9 +194,8 @@ ROUTER_STATUS Packet::send() {
                 tcpPayloadSize_,
                 l,
                 0);
-            std::cout << "checkerr: " << checkerr << std::endl;
             if (checkerr == -1) {
-                printf("Error building TCP header: %s\n", libnet_geterror(l));
+                std::cout << "Error building TCP header: " << libnet_geterror(l) << std::endl;
                 libnet_destroy(l);
                 return E_FAILED;
             }
@@ -209,12 +205,14 @@ ROUTER_STATUS Packet::send() {
             size = 0;
             
         } else {
-            printf("\tUnknown Protocol\n");
+            std::cout << "\tUnknown Protocol" << std::endl;
             libnet_destroy(l);
             return E_FAILED;
         }
 
+#ifdef TRACE_LOG
         std::cout << "ip size: " << size << " sending to ip " << ntohl(packetData_.dstIP.raw) << " from " << ntohl(packetData_.srcIP.raw) << std::endl;
+#endif
         ip_ptag = libnet_build_ipv4(
             LIBNET_IPV4_H + ntohs(packetData_.nPacketLength) - this->getPacketHeaderLength(), /* length */
             packetData_.flagsTOS,	  /* TOS */
@@ -232,8 +230,7 @@ ROUTER_STATUS Packet::send() {
 
 
         if (ip_ptag == -1) {
-            std::cout << "Cant't build IP header" << std::endl;
-            fprintf(stderr, "Can't build IP header: %s\n", libnet_geterror(l));
+            std::cout << "Cant't build IP header" << libnet_geterror(l)  << std::endl;
             ret = E_FAILED;
         } else {
             ret = S_OK;
@@ -243,14 +240,14 @@ ROUTER_STATUS Packet::send() {
 
         if (ret == S_OK) {
             // Write to network
-            std::cout << "libnet write" << std::endl;
             count = libnet_write(l);
             if (count == -1) {
-                std::cout << "Failed to write packet" << std::endl;
-                fprintf(stderr, "Write error: %s\n", libnet_geterror(l));
+                std::cout << "Failed to write packet: " << libnet_geterror(l) << std::endl;
                 ret = E_FAILED;
             } else {
+#ifdef TRACE_LOG
                 std::cout << "Wrote " << count << " bytes with libnet" << std::endl;
+#endif
                 ret = S_OK;
             }
         }

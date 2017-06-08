@@ -12,6 +12,11 @@ set(CFLAGS "-fPIC -Wall -Werror -g")
 
 add_definitions(${CFLAGS})
 
+if (CMAKE_BUILD_TYPE MATCHES "Debug")
+  message("Enabling trace log")
+  add_definitions(-DTRACE_LOG=1)
+endif ()
+
 add_executable(test_router test_main.cpp)
 add_executable(router main.cpp)
 

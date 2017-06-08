@@ -40,27 +40,17 @@ Router::~Router() {
 }
 
 void Router::handlePacket(PacketPtr pkt) {
-    std::cout << " ======= SENDING PACKET ======== " << std::endl;
-    ROUTER_STATUS ret = pkt->send();
-    if(ret == E_FAILED){
-        std::cout << "send pkt failed" << std::endl;
-    } else if (ret == S_OK) {
-        std::cout << "send pkt OK" << std::endl;
-    } else {
-        std::cout << "send pkt invalid return" << std::endl;
-    }
-    std::cout << " ======= PACKET SENT ======== " << std::endl;
-    
+    pkt->send();
 }
 
 int Router::newPacket(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, void *data)
 {
-    std::cout << " ======= new packet ======== " << std::endl;
     PacketPtr pkt = std::make_shared<Packet>(nfa);
+#ifdef TRACE_LOG
     pkt->dump();
+#endif
     int ret = nfq_set_verdict(qh, pkt->getNetfilterID(), NF_DROP, 0, NULL);
     next_->handlePacket(pkt);
-    std::cout << " ======= RETURNING ASYNC ======= " << std::endl;
     return ret;
 }
 

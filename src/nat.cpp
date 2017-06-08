@@ -49,16 +49,22 @@ void Nat::handlePacket(PacketPtr pkt) {
         return;
     }
     if(pkt->getSourceIP() == dnatIp_) { 
+#ifdef TRACE_LOG
         std::cout << "setting srcIp to " << ipOut_ << std::endl;
+#endif
         pkt->setSourceIP(ipOut_);
     } else {
+#ifdef TRACE_LOG
         std::cout << "setting dstIp to " << dnatIp_ << std::endl;
+#endif
         pkt->setDestinationIP(dnatIp_);
         pkt->setOutboundInterface("eth1");
 
     }
     next_->handlePacket(pkt);
+#ifdef TRACE_LOG
     std::cout << "nat dumping pkt" << std::endl;
     pkt->dump();
+#endif
 }
 
