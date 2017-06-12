@@ -11,7 +11,7 @@
 class Router;
 typedef std::shared_ptr<Router> RouterPtr;
 
-class Router : public Filter
+class Router : public Filter, public std::enable_shared_from_this<Router>
 {
  public:
     static RouterPtr getInstance();
@@ -23,16 +23,23 @@ class Router : public Filter
     void handlePacket(PacketPtr pkt);
     void setDelay(int del){delayMs_ = del;}
     void setLoss(float loss){lossProb_ = loss;}
-    void setOutIf(std::string ifOut){ifOut_ = ifOut;}
+    void setExtIf(std::string ifExt){ifExt_ = ifExt;}
+    void setExtIp(std::string ipExt){ipExt_ = ipExt;}
+    void setIntIf(std::string ifInt){ifInt_ = ifInt;}
+    void setIntIp(std::string ipInt){ipInt_ = ipInt;}
+
     
  private:
     std::vector<Packet> packets_;
-    std::shared_ptr<Filter> delay_;
-    std::shared_ptr<Filter> loss_;
-    std::shared_ptr<Filter> nat_;
+    std::shared_ptr<StaticDelay> delay_;
+    std::shared_ptr<Loss> loss_;
+    std::shared_ptr<Nat> nat_;
     int delayMs_;
     float lossProb_;
-    std::string ifOut_;
+    std::string ifExt_;
+    std::string ipExt_;
+    std::string ifInt_;
+    std::string ipInt_;
 };
 
 #endif // ROUTER_HPP

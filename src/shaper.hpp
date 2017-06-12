@@ -14,7 +14,7 @@
 #include <queue>
 #include <mutex>
 
-class StaticDelay : public Filter
+class StaticDelay : public Filter, public std::enable_shared_from_this<StaticDelay>
 {
  public:
     StaticDelay(int delay);
@@ -31,7 +31,7 @@ class StaticDelay : public Filter
     boost::asio::io_service* ioService_;
 };
 
-class Loss : public Filter
+class Loss : public Filter, public std::enable_shared_from_this<Loss>
 {
  public:
     Loss(float loss);

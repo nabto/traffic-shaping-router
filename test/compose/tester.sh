@@ -43,7 +43,7 @@ function test {
 }
 
 case $1 in
-    "create_containers")
+    "create")
         create_containers
         ;;
     "run_test")

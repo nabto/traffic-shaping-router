@@ -2,7 +2,7 @@ version: '2.1'
 services:
   router:
     build: ../router_node
-    command: router.sh
+    command: router.sh 10.0.2.2 10.0.2.0/24
     privileged: true
     volumes:
       - ./data:/data

@@ -10,6 +10,7 @@
 #include "packet.hpp"
 
 #include <netinet/udp.h>
+#include <netinet/ip_icmp.h>
 #include <netinet/ip.h>
 #include <linux/tcp.h>
 
@@ -91,6 +92,10 @@ Packet::Packet(struct nfq_data *nfa) : stamp_(boost::posix_time::microsec_clock:
 #endif
     } else if (ipProt_ == PROTO_ICMP){
         transLen_ = ipLen_ - ipHdrLen_;
+        icmphdr* icmp = (icmphdr*)((packetData_.data()+ipHdrLen_));
+        icmpType_ = icmp->type;
+        icmpCode_ = icmp->code;
+        icmpId_ = icmp->un.echo.id;
     } else {
         // unknown protocol passing it raw, but NAT should drop it
         transLen_ = ipLen_ - ipHdrLen_;
@@ -279,6 +284,7 @@ void Packet::dump() {
 
     if (this->getProtocol() == PROTO_ICMP) {
         printf("\tICMP Packet\n");
+        printf("\tid: %u\n", icmpId_);
     } else if (this->getProtocol() == PROTO_UDP) {
         printf("\tUDP Source Port: %u\n",sport_);
         printf("\tUDP Destination Port: %u\n",dport_);

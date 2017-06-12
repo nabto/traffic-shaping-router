@@ -62,14 +62,20 @@ class Packet
 		
     const int getNetfilterID() const;
     const uint32_t getSourceIP() const;
+    const uint32_t getDestinationIP() const;
+    const uint16_t getSourcePort() const {return sport_;}
+    const uint16_t getDestinationPort() const {return dport_;}
+    const uint16_t getIcmpId() const {return icmpId_;}
+
     void setSourceIP(uint32_t);
     void setDestinationIP(uint32_t);
-    const uint32_t getDestinationIP() const;
+    void setSourcePort(uint16_t sport){sport_ = sport;}
+    void setDestinationPort(uint16_t dport){dport_ = dport;}
+
     const uint16_t getFragmentFlags() const;
     const uint16_t getFragmentID() const;
-		
     const uint8_t getProtocol() const;
-		
+
     void getInboundInterface(std::string & in) const;
     void getOutboundInterface(std::string & out) const;
     void setOutboundInterface(const std::string & out);
@@ -104,6 +110,11 @@ class Packet
     uint16_t sport_;
     uint16_t dport_;
     uint16_t transLen_;
+
+    // -- ICMP PARAMETERS --
+    uint8_t icmpType_;
+    uint8_t icmpCode_;
+    uint16_t icmpId_;
 
     // -- TCP PARAMETERS --
     uint32_t seq_;
