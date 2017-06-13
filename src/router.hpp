@@ -6,7 +6,7 @@
 #include "filter.hpp"
 #include "shaper.hpp"
 #include "nat.hpp"
-#include "async_queue.hpp"
+#include "output.hpp"
 
 class Router;
 typedef std::shared_ptr<Router> RouterPtr;
@@ -21,29 +21,17 @@ class Router : public Filter, public std::enable_shared_from_this<Router>
     bool execute();
     int newPacket(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, void *data);
     void handlePacket(PacketPtr pkt);
-    void popHandler(const boost::system::error_code& ec, const PacketPtr pkt);
     
-    void setDelay(int del){delayMs_ = del;}
-    void setLoss(float loss){lossProb_ = loss;}
-    void setExtIf(std::string ifExt){ifExt_ = ifExt;}
-    void setExtIp(std::string ipExt){ipExt_ = ipExt;}
-    void setIntIf(std::string ifInt){ifInt_ = ifInt;}
-    void setIntIp(std::string ipInt){ipInt_ = ipInt;}
-
+    void setDelay(int del){delay_->setDelay(del);}
+    void setLoss(float loss){loss_->setLoss(loss);}
+    void setIPs(std::string ipExt, std::string ipInt){nat_->setIPs(ipExt, ipInt);}
+    void setDnatRule(std::string ip, uint16_t extPort, uint16_t intPort){nat_->setDnatRule(ip, extPort, intPort);}
     
  private:
-    std::shared_ptr<TpService> tp_;
-    AsyncQueue<PacketPtr> queue_;
-    std::vector<Packet> packets_;
     std::shared_ptr<StaticDelay> delay_;
     std::shared_ptr<Loss> loss_;
     std::shared_ptr<Nat> nat_;
-    int delayMs_;
-    float lossProb_;
-    std::string ifExt_;
-    std::string ipExt_;
-    std::string ifInt_;
-    std::string ipInt_;
+    std::shared_ptr<Output> output_;
 };
 
 #endif // ROUTER_HPP

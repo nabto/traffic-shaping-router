@@ -18,18 +18,16 @@
 class StaticDelay : public Filter, public std::enable_shared_from_this<StaticDelay>
 {
  public:
-    StaticDelay(int delay);
+    StaticDelay();
     ~StaticDelay();
     void handlePacket(PacketPtr pkt);
-    //void queueTimeEvent();
     void popHandler(const boost::system::error_code& ec, const PacketPtr pkt);
     void init();
+    void setDelay(int delay) {delay_ = boost::posix_time::milliseconds(delay);}
  private:
-//    void scheduleEvent();
     boost::posix_time::time_duration delay_;
     std::shared_ptr<TpService>  tp_;
     std::mutex mutex_;
-    //std::queue<PacketPtr> queue_;
     AsyncQueue<PacketPtr> queue_;
     boost::asio::io_service* ioService_;
 };
@@ -37,9 +35,10 @@ class StaticDelay : public Filter, public std::enable_shared_from_this<StaticDel
 class Loss : public Filter, public std::enable_shared_from_this<Loss>
 {
  public:
-    Loss(float loss);
-    ~Loss();
+    Loss(): loss_(0) {srand (static_cast <unsigned> (time(0)));}
+    ~Loss() {}
     void handlePacket(PacketPtr pkt);
+    void setLoss(float loss){loss_ = loss;}
 
  private:
     float loss_;

@@ -22,14 +22,14 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *
 	return rt->newPacket(qh,nfmsg,nfa,data);
 }
 
-Router::Router(): queue_(*(TpService::getInstance()->getIoService())){
+Router::Router(){
 }
 
 void Router::init(){
     auto self = shared_from_this();
-    nat_ = std::make_shared<Nat>(ipExt_, ipInt_);
-    delay_ = std::make_shared<StaticDelay>(delayMs_);
-    loss_ = std::make_shared<Loss>(lossProb_);
+    nat_ = std::make_shared<Nat>();
+    delay_ = std::make_shared<StaticDelay>();
+    loss_ = std::make_shared<Loss>();
     setNext(loss_);
     loss_->setNext(nat_);
     nat_->setNext(delay_);

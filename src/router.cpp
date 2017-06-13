@@ -9,7 +9,6 @@
 #include <errno.h>
 
 #include "router.hpp"
-#include "tpService.hpp"
 
 extern "C" {
 #include <libnetfilter_queue/libnetfilter_queue.h>
@@ -23,39 +22,27 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *
     return rt->newPacket(qh,nfmsg,nfa,data);
 }
 
-Router::Router(): queue_(*(TpService::getInstance()->getIoService())) {
-    lossProb_ = 0;
-    delayMs_ = 0;
-
-}
-
-void Router::popHandler(const boost::system::error_code& ec, const PacketPtr pkt) {
-    pkt->send();
-
-    queue_.asyncPop(std::bind(&Router::popHandler, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+Router::Router() {
 }
 
 void Router::init() {
-    auto self = shared_from_this();
-    loss_ = std::make_shared<Loss>(lossProb_);
-    nat_ = std::make_shared<Nat>(ipExt_, ipInt_);
-    delay_ = std::make_shared<StaticDelay>(delayMs_);
+    loss_ = std::make_shared<Loss>();
+    nat_ = std::make_shared<Nat>();
+    delay_ = std::make_shared<StaticDelay>();
+    output_ = std::make_shared<Output>();
     setNext(loss_);
     loss_->setNext(nat_);
     nat_->setNext(delay_);
-    delay_->setNext(self);
+    delay_->setNext(output_);
 
+    output_->init();
     delay_->init();
-    nat_->setDnatRule("10.0.2.2", 5201, 5201);
-    queue_.asyncPop(std::bind(&Router::popHandler, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 }
 
 Router::~Router() {
 }
 
 void Router::handlePacket(PacketPtr pkt) {
-    // pkt->send();
-    queue_.push(pkt);
 }
 
 int Router::newPacket(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, void *data)
@@ -118,31 +105,15 @@ bool Router::execute() {
     nh = nfq_nfnlh(h);
     fd = nfnl_fd(nh);
 
-/*    uint32_t size;
-    uint32_t size_len;
-    size_len = sizeof(size);
-    rv = getsockopt (fd, SOL_SOCKET, SO_RCVBUFFORCE, &size, &size_len); 
-    printf ("Oldsize of buffer: %i \n",size);
-    size = 1024*1024*16;//4194304;
-    rv = setsockopt (fd, SOL_SOCKET, SO_RCVBUFFORCE, &size, size_len); 
-    rv = getsockopt (fd, SOL_SOCKET, SO_RCVBUFFORCE, &size, &size_len); 
-    printf ("New size of buffer: %i \n",size); 
-*/  
-    std::cout << "Router starting Execute loop with buf size: " << RECV_BUF_SIZE << std::endl;
-    // while ((rv = recv(fd, buf, RECV_BUF_SIZE, 0)) && rv >= 0) {  
-    //     nfq_handle_packet(h, buf, rv);
-    // }
+    std::cout << "Router starting Execute loop" << std::endl;
     while ((rv = recv(fd, buf, RECV_BUF_SIZE, 0))) {
         if (rv >= 0){
             nfq_handle_packet(h, buf, rv);
-        } else {
-            std::cout << "recv failed with errno: " << errno << std::endl;
         }
     }
     
     std::cout << "exiting normally with rv: " << rv << " and errno: " << errno << std::endl;
     nfq_destroy_queue(qh);
-
     nfq_close(h);
 
     return true;  

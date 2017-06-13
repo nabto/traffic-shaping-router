@@ -23,9 +23,7 @@ std::ostream& operator<<(std::ostream& os, const ConnectionTuple& ct) {
 }
 //#define TRACE_LOG
 
-Nat::Nat(std::string ipExt, std::string ipInt): ipExt_(inet_network(ipExt.c_str())), ipInt_(inet_network(ipInt.c_str())){
-    std::cout << std::endl << "======== NAT INIT ======= " << std::endl;
-    std::cout << "ipExt: " << ipExt_ << " intIp: " << ipInt_ << std::endl;
+Nat::Nat(){
 }
 
 
@@ -142,20 +140,18 @@ void Nat::handlePacket(PacketPtr pkt) {
     }
 }
 
-int Nat::setDnatRule(std::string ip, uint16_t extPort, uint16_t intPort){
+void Nat::setDnatRule(std::string ip, uint16_t extPort, uint16_t intPort){
     ConnectionTuple tuple(0,inet_network(ip.c_str()),0,intPort,0);
     dnatRules[extPort] = tuple;
-    return 0;
 }
 
-int Nat::removeDnatRule(uint16_t extPort){
+void Nat::removeDnatRule(uint16_t extPort){
     for (auto it = dnatRules.begin(); it != dnatRules.end();){
         if(it->first == extPort){
             it = dnatRules.erase(it);
-            return 0;
+            return;
         } else {
             ++it;
         }
     }
-    return -1;
 }

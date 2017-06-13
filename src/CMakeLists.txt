@@ -7,6 +7,7 @@ add_library(packet_src packet.cpp)
 add_library(nat_src nat.cpp)
 add_library(router_src router.cpp)
 add_library(shaper_src shaper.cpp)
+add_library(output_src output.cpp)
 include_directories("/usr/include/boost")
 set(CFLAGS "-fPIC -Wall -Werror -g")
 
@@ -26,6 +27,7 @@ target_link_libraries(router
   packet_src
   nat_src
   shaper_src
+  output_src
   tpservice_src
   netfilter_queue
   nfnetlink
@@ -39,6 +41,7 @@ target_link_libraries(test_router
   packet_src
   nat_src
   shaper_src
+  output_src
   tpservice_src
   netfilter_queue
   nfnetlink

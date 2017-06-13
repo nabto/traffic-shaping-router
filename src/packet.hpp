@@ -5,8 +5,6 @@
 
 extern "C" {
 #include <libnetfilter_queue/libnetfilter_queue.h>
-//#include <libnetfilter_queue/libipq.h>
-//#include <linux/netfilter.h>
 }
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -18,35 +16,45 @@ extern "C" {
 #define PROTO_TCP 6
 #define PROTO_UDP 17
 
-typedef enum _ROUTER_STATUS
+struct ipParams
 {
-    S_OK,
-    E_FAILED,
-    E_UNDEFINED,
-    E_INVALID_PROTOCOL
-} ROUTER_STATUS;
+    uint16_t ipLen;
+    uint8_t	 ipTos;
+    uint16_t ipId;
+    uint16_t ipFrag;
+    uint8_t  ipTtl;
+    uint8_t  ipProt;
+    uint32_t ipSrc;
+    uint32_t ipDst;
+    uint8_t  ipHdrLen;    
+};
 
-typedef union _ipAddr
+struct transParams
 {
-    uint32_t      raw;
-    unsigned char octet[4];
-} ipAddr;
+    uint16_t sport;
+    uint16_t dport;
+    uint16_t len;
+};
 
-typedef struct _rawPacket
+struct tcpParams
 {
-    uint8_t  nVersionLength;
-    uint8_t	 flagsTOS;
-    uint16_t nPacketLength;
-    uint16_t nFragmentID;
-    uint16_t nFragFlagsOffset;
-    uint8_t	 TTL;
-    uint8_t	 nProtocol;
-    uint16_t nHeaderChecksum;
-    ipAddr   srcIP;
-    ipAddr   dstIP;
+    uint32_t seq;
+    uint32_t ack;
+    uint8_t control;
+    uint16_t win;
+    uint16_t urg;
+    const uint8_t * tcpPayload;
+    uint32_t tcpPayloadSize;
+    uint8_t tcpOptionsSize;
+    uint8_t * tcpOptions;
+};
 
-    unsigned char data[1500];
-} rawPacket;
+struct icmpParams
+{
+    uint8_t icmpType;
+    uint8_t icmpCode;
+    uint16_t icmpId;
+};
 
 class Packet;
 typedef std::shared_ptr<Packet> PacketPtr;
@@ -60,29 +68,34 @@ class Packet
     Packet();
     ~Packet();
 		
+    
+    void setSourceIP(uint32_t);
+    void setDestinationIP(uint32_t);
+    void setSourcePort(uint16_t sport){trans_.sport = sport;}
+    void setDestinationPort(uint16_t dport){trans_.dport = dport;}
+    void setOutboundInterface(const std::string & out);
+
+
+    void processAsync();
+
     const int getNetfilterID() const;
     const uint32_t getSourceIP() const;
     const uint32_t getDestinationIP() const;
-    const uint16_t getSourcePort() const {return sport_;}
-    const uint16_t getDestinationPort() const {return dport_;}
-    const uint16_t getIcmpId() const {return icmpId_;}
-
-    void setSourceIP(uint32_t);
-    void setDestinationIP(uint32_t);
-    void setSourcePort(uint16_t sport){sport_ = sport;}
-    void setDestinationPort(uint16_t dport){dport_ = dport;}
-
+    const uint16_t getSourcePort() const {return trans_.sport;}
+    const uint16_t getDestinationPort() const {return trans_.dport;}
+    const uint16_t getIcmpId() const {return icmp_.icmpId;}
     const uint16_t getFragmentFlags() const;
     const uint16_t getFragmentID() const;
     const uint8_t getProtocol() const;
-
+    const struct ipParams getIpParams() const {return ip_;}
+    const struct transParams getTransParams() const {return trans_;}
+    const struct icmpParams getIcmpParams() const {return icmp_;}
+    const struct tcpParams getTcpParams() const {return tcp_;}
+    const std::vector<uint8_t> getPacketData() const {return packetData_;}
     void getInboundInterface(std::string & in) const;
     void getOutboundInterface(std::string & out) const;
-    void setOutboundInterface(const std::string & out);
 
-    void processAsync();
-    ROUTER_STATUS send();
-
+    
     void dump();
     void resetTimeStamp(){stamp_ = boost::posix_time::microsec_clock::local_time();}
     boost::posix_time::ptime getTimeStamp(){return stamp_;}
@@ -95,37 +108,10 @@ class Packet
     int packetDataLen_;
     int nfqID_;
     
-    // ==== IP PARAMETERS ====
-    uint16_t ipLen_;
-    uint8_t	 ipTos_;
-    uint16_t ipId_;
-    uint16_t ipFrag_;
-    uint8_t  ipTtl_;
-    uint8_t  ipProt_;
-    uint32_t ipSrc_;
-    uint32_t ipDst_;
-    uint8_t  ipHdrLen_;
-
-    // ==== TRANSPORT PARAMETERS ====
-    uint16_t sport_;
-    uint16_t dport_;
-    uint16_t transLen_;
-
-    // -- ICMP PARAMETERS --
-    uint8_t icmpType_;
-    uint8_t icmpCode_;
-    uint16_t icmpId_;
-
-    // -- TCP PARAMETERS --
-    uint32_t seq_;
-    uint32_t ack_;
-    uint8_t control_;
-    uint16_t win_;
-    uint16_t urg_;
-    const uint8_t * tcpPayload_;
-    uint32_t tcpPayloadSize_;
-    uint8_t tcpOptionsSize_;
-    uint8_t * tcpOptions_;
+    struct ipParams ip_;
+    struct transParams trans_;
+    struct icmpParams icmp_;
+    struct tcpParams tcp_;
  private:
     void dumpMem(unsigned char* p,int len);
 };
