@@ -14,7 +14,7 @@ typedef std::weak_ptr<ConnectionEntry> ConnectionEntryWeakPtr;
 class ConnectionEntry : public std::enable_shared_from_this<ConnectionEntry>
 {
  public:
-    ConnectionEntry(int timeout, PacketPtr pkt): timer_(*(TpService::getInstance()->getIoService())), timeout_(timeout), srcIp_(pkt->getSourceIP()), dstIp_(pkt->getDestinationIP()), sport_(pkt->getSourcePort()), dport_(pkt->getDestinationPort()), proto_(pkt->getProtocol()) {}
+    ConnectionEntry(int timeout): timer_(*(TpService::getInstance()->getIoService())), timeout_(timeout) {}
     void start(){ armTimer();}
     void rearm(){ stop(); armTimer();}
     void stop(){
@@ -22,20 +22,9 @@ class ConnectionEntry : public std::enable_shared_from_this<ConnectionEntry>
         timer_.cancel(ec);
     }
 
-    inline bool operator==(const ConnectionEntry& ct){
-        return (std::make_tuple(srcIp_, dstIp_, sport_, dport_, proto_) == std::make_tuple(ct.srcIp_, ct.dstIp_, ct.sport_, ct.dport_, ct.proto_));
-    }
-    inline bool operator!=(const ConnectionEntry& ct){
-        return (std::make_tuple(srcIp_, dstIp_, sport_, dport_, proto_) != std::make_tuple(ct.srcIp_, ct.dstIp_, ct.sport_, ct.dport_, ct.proto_));
-    }
  private:
     boost::asio::steady_timer timer_;
     int timeout_;
-    uint32_t srcIp_;
-    uint32_t dstIp_;
-    uint16_t sport_;
-    uint16_t dport_;
-    uint8_t proto_;
     std::mutex mutex_;
     
     void armTimer() {

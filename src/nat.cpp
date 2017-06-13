@@ -74,7 +74,7 @@ void Nat::handlePacket(PacketPtr pkt) {
         std::cout << "Connection not found, making new:" << std::endl;
 #endif
         auto self = shared_from_this();
-        ConnectionEntryPtr entry = ConnectionEntryPtr(new ConnectionEntry(CONNECTION_TIMEOUT, pkt),
+        ConnectionEntryPtr entry = ConnectionEntryPtr(new ConnectionEntry(CONNECTION_TIMEOUT),
                                                       [self,tuple](ConnectionEntry* obj){
                                                           self->removeFromMaps(tuple);
                                                           delete obj;
