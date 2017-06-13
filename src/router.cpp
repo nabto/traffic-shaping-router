@@ -62,8 +62,6 @@ RouterPtr Router::getInstance() {
     std::lock_guard<std::mutex> lock(instanceMutex_);
     if ( !instance_ ) {
         instance_ = std::make_shared<Router>();
-        // Running init() with default parameters, if setDelay(), setLoss()
-        // is called, init() should be called again manually
         instance_->init();
     }
     return instance_;
@@ -78,27 +76,27 @@ bool Router::execute() {
     char buf[RECV_BUF_SIZE];
     h = nfq_open();
     if (!h) {
-        fprintf(stderr, "error during nfq_open()\n");
+        std::cout << "error during nfq_open()" << std::endl;
         return false;
     }
 
     if (nfq_unbind_pf(h, AF_INET) < 0) {
-        fprintf(stderr, "error during nfq_unbind_pf()\n");
+        std::cout << "error during nfq_unbind_pf()\n" << std::endl;
     }
 
     if (nfq_bind_pf(h, AF_INET) < 0) {
-        fprintf(stderr, "error during nfq_bind_pf()\n");
+        std::cout << "error during nfq_bind_pf()" << std::endl;
         return false;
     }
 
     qh = nfq_create_queue(h,  0, &cb, NULL);
     if (!qh) {
-        fprintf(stderr, "error during nfq_create_queue()\n");
+        std::cout << "error during nfq_create_queue()" << std::endl;
         return false;
     }
 
     if (nfq_set_mode(qh, NFQNL_COPY_PACKET, 0xffff) < 0) {
-        fprintf(stderr, "can't set packet_copy mode\n");
+        std::cout << "can't set packet_copy mode" << std::endl;
         return false;
     }
 

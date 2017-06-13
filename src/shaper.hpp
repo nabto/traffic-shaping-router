@@ -26,8 +26,6 @@ class StaticDelay : public Filter, public std::enable_shared_from_this<StaticDel
     void setDelay(int delay) {delay_ = boost::posix_time::milliseconds(delay);}
  private:
     boost::posix_time::time_duration delay_;
-    std::shared_ptr<TpService>  tp_;
-    std::mutex mutex_;
     AsyncQueue<PacketPtr> queue_;
     boost::asio::io_service* ioService_;
 };

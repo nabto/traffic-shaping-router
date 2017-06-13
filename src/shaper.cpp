@@ -6,8 +6,7 @@
 
 StaticDelay::StaticDelay(): queue_(*(TpService::getInstance()->getIoService())) {
     delay_ = boost::posix_time::milliseconds(0);
-    tp_ = TpService::getInstance();
-    ioService_ = tp_->getIoService();
+    ioService_ = TpService::getInstance()->getIoService();
 }
 void StaticDelay::init() {
     queue_.asyncPop(std::bind(&StaticDelay::popHandler, shared_from_this(), std::placeholders::_1, std::placeholders::_2));

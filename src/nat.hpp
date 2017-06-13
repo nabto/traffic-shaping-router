@@ -13,10 +13,7 @@ class Nat : public Filter, public std::enable_shared_from_this<Nat>
     Nat();
     ~Nat();
     void handlePacket(PacketPtr pkt);
-    void setIPs(std::string ipExt, std::string ipInt) {
-        ipExt_ = inet_network(ipExt.c_str());
-        ipInt_=inet_network(ipInt.c_str());
-    }
+    void setIPs(std::string ipExt, std::string ipInt);
     void setDnatRule(std::string ip, uint16_t extPort, uint16_t intPort);
     void removeDnatRule(uint16_t extPort);
 

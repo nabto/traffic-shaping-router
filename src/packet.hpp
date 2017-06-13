@@ -69,31 +69,27 @@ class Packet
     ~Packet();
 		
     
-    void setSourceIP(uint32_t);
-    void setDestinationIP(uint32_t);
-    void setSourcePort(uint16_t sport){trans_.sport = sport;}
-    void setDestinationPort(uint16_t dport){trans_.dport = dport;}
-    void setOutboundInterface(const std::string & out);
+    void setSourceIP(uint32_t ip) {srcIp_ = ip;}
+    void setDestinationIP(uint32_t ip) {dstIp_ = ip;}
+    void setSourcePort(uint16_t sport){sport_ = sport;}
+    void setDestinationPort(uint16_t dport){dport_ = dport;}
+    void setOutboundInterface(const std::string & out) {strOutboundInterface_ = out;}
 
 
     void processAsync();
 
-    const int getNetfilterID() const;
-    const uint32_t getSourceIP() const;
-    const uint32_t getDestinationIP() const;
-    const uint16_t getSourcePort() const {return trans_.sport;}
-    const uint16_t getDestinationPort() const {return trans_.dport;}
-    const uint16_t getIcmpId() const {return icmp_.icmpId;}
-    const uint16_t getFragmentFlags() const;
-    const uint16_t getFragmentID() const;
-    const uint8_t getProtocol() const;
-    const struct ipParams getIpParams() const {return ip_;}
-    const struct transParams getTransParams() const {return trans_;}
-    const struct icmpParams getIcmpParams() const {return icmp_;}
-    const struct tcpParams getTcpParams() const {return tcp_;}
+    const int getNetfilterID() const {return nfqID_;}
+    const uint32_t getSourceIP() const {return srcIp_;}
+    const uint32_t getDestinationIP() const {return dstIp_;}
+    const uint16_t getSourcePort() const {return sport_;}
+    const uint16_t getDestinationPort() const {return dport_;}
+    const uint16_t getIcmpId() const {return icmpId_;}
+    const uint16_t getFragmentFlags() const {return ipFrag_ & 0xE000;}
+    const uint16_t getFragmentID() const {return ipFrag_ & 0x1FFF;}
+    const uint8_t getProtocol() const {return transProt_;}
     const std::vector<uint8_t> getPacketData() const {return packetData_;}
-    void getInboundInterface(std::string & in) const;
-    void getOutboundInterface(std::string & out) const;
+    void getInboundInterface(std::string & in) const {in = strInboundInterface_;}
+    void getOutboundInterface(std::string & out) const {out = strOutboundInterface_;}
 
     
     void dump();
@@ -107,13 +103,16 @@ class Packet
     std::string	strOutboundInterface_;
     int packetDataLen_;
     int nfqID_;
-    
-    struct ipParams ip_;
-    struct transParams trans_;
-    struct icmpParams icmp_;
-    struct tcpParams tcp_;
- private:
-    void dumpMem(unsigned char* p,int len);
+
+    uint8_t transProt_;
+    uint32_t srcIp_;
+    uint32_t dstIp_;
+    uint16_t sport_;
+    uint16_t dport_;
+    uint16_t icmpId_;
+
+    uint16_t ipFrag_;
+    uint8_t ipHdrLen_;
 };
 
 #endif

@@ -1,11 +1,25 @@
 #include "output.hpp"
 
-//#include <netinet/udp.h>
-//#include <netinet/ip_icmp.h>
+#include <netinet/udp.h>
+#include <netinet/tcp.h>
 #include <netinet/ip.h>
-//#include <linux/tcp.h>
 
-//#define TRACE_LOG
+
+Output::Output(): queue_(*(TpService::getInstance()->getIoService())) {
+    l_ = libnet_init(LIBNET_RAW4, "",errbuf_);
+}
+
+Output::~Output() {
+    libnet_destroy(l_);
+}
+    
+void Output::init() {
+    queue_.asyncPop(std::bind(&Output::popHandler, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+}
+
+void Output::handlePacket(PacketPtr pkt) {
+    queue_.push(pkt);
+}
 
 void Output::popHandler(const boost::system::error_code& ec, const PacketPtr pkt) {
     if(l_ == NULL){
@@ -22,25 +36,25 @@ void Output::popHandler(const boost::system::error_code& ec, const PacketPtr pkt
         pkt->dump();
 #endif
 
-    struct transParams trans = pkt->getTransParams();
     std::vector<uint8_t> pktData = pkt->getPacketData();
 
     iphdr* ip = (iphdr*)pktData.data();
     uint8_t ipHdrLen = ip->ihl << 2;
 
     unsigned char* pData = (pktData.data()+ipHdrLen);
-    uint32_t size = 0;
+    uint32_t size;
     libnet_ptag_t ip_ptag = 0; 
     if (ip->protocol == PROTO_ICMP){
-        size = trans.len;
+        size = ntohs(ip->tot_len) - ipHdrLen;
     } else if (ip->protocol == PROTO_UDP) {
+        udphdr* udp = (udphdr*)(pktData.data()+ipHdrLen);
         int checkerr = libnet_build_udp(
-            trans.sport,
-            trans.dport,
-            trans.len,
+            pkt->getSourcePort(),
+            pkt->getDestinationPort(),
+            ntohs(udp->uh_ulen),
             0,
             pktData.data()+ipHdrLen+8,
-            trans.len - 8,
+            ntohs(udp->uh_ulen) - 8,
             l_,
             0);
         if (checkerr == -1) {
@@ -51,18 +65,22 @@ void Output::popHandler(const boost::system::error_code& ec, const PacketPtr pkt
         size = 0;
     } else if (ip->protocol == PROTO_TCP) {
         // build tcp header 
-        struct tcpParams tcp = pkt->getTcpParams();
-        if (tcp.tcpPayloadSize == 0){
-            tcp.tcpPayload = NULL;
+        tcphdr* tcp = (tcphdr*)(pktData.data()+ipHdrLen);
+        uint8_t tcpOptionsSize = (tcp->th_off << 2) - 20;
+        uint32_t tcpPayloadSize = pktData.size() - ipHdrLen - 20 - tcpOptionsSize;;
+        const uint8_t * tcpPayload = (uint8_t*)tcp + 20 + tcpOptionsSize;
+        
+        if (tcpPayloadSize == 0){
+            tcpPayload = NULL;
         }
             
 #ifdef TRACE_LOG
         std::cout << "dumpint tcp options: " << std::endl;
-        dumpMem((uint8_t *)tcp.tcpOptions, tcp.tcpOptionsSize);
+        dumpMem((uint8_t *)tcp + 20, tcpOptionsSize);
 #endif
         int checkerr = libnet_build_tcp_options(
-            tcp.tcpOptions,
-            tcp.tcpOptionsSize,
+            (uint8_t*)tcp + 20,
+            tcpOptionsSize,
             l_,
             0);
 
@@ -72,17 +90,17 @@ void Output::popHandler(const boost::system::error_code& ec, const PacketPtr pkt
         }
 
         checkerr = libnet_build_tcp(
-            trans.sport,
-            trans.dport,
-            tcp.seq,
-            tcp.ack,
-            tcp.control,
-            tcp.win,
+            pkt->getSourcePort(),
+            pkt->getDestinationPort(),
+            ntohl(tcp->th_seq),
+            ntohl(tcp->th_ack),
+            tcp->th_flags,
+            ntohs(tcp->th_win),
             0,
-            tcp.urg,
-            ipHdrLen+20+tcp.tcpOptionsSize+tcp.tcpPayloadSize,
-            tcp.tcpPayload,
-            tcp.tcpPayloadSize,
+            ntohs(tcp->th_urp),
+            ipHdrLen+20+tcpOptionsSize+tcpPayloadSize,
+            tcpPayload,
+            tcpPayloadSize,
             l_,
             0);
         if (checkerr == -1) {
@@ -94,7 +112,7 @@ void Output::popHandler(const boost::system::error_code& ec, const PacketPtr pkt
         size = 0;
     } else {
         std::cout << "\tUnknown Protocol" << std::endl;
-        size = trans.len;
+        size = ntohs(ip->tot_len) - ipHdrLen;
     }
 
 #ifdef TRACE_LOG
@@ -131,7 +149,6 @@ void Output::popHandler(const boost::system::error_code& ec, const PacketPtr pkt
         std::cout << "Wrote " << count << " bytes with libnet" << std::endl;
 #endif
     }
-    //pkt->send();
     queue_.asyncPop(std::bind(&Output::popHandler, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 }
 
