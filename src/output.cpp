@@ -1,5 +1,12 @@
 #include "output.hpp"
 
+//#include <netinet/udp.h>
+//#include <netinet/ip_icmp.h>
+#include <netinet/ip.h>
+//#include <linux/tcp.h>
+
+//#define TRACE_LOG
+
 void Output::popHandler(const boost::system::error_code& ec, const PacketPtr pkt) {
     if(l_ == NULL){
         std::cout << "Libnet_init() Failed: " << errbuf_ << std::endl <<  "\tretrying: " << std::endl;
@@ -10,21 +17,29 @@ void Output::popHandler(const boost::system::error_code& ec, const PacketPtr pkt
         }
     }
     libnet_clear_packet(l_);
-    struct ipParams ip = pkt->getIpParams();
+#ifdef TRACE_LOG
+        std::cout << "Output dumping packet: " << std::endl;
+        pkt->dump();
+#endif
+
     struct transParams trans = pkt->getTransParams();
     std::vector<uint8_t> pktData = pkt->getPacketData();
-    unsigned char* pData = (pktData.data()+ip.ipHdrLen);
+
+    iphdr* ip = (iphdr*)pktData.data();
+    uint8_t ipHdrLen = ip->ihl << 2;
+
+    unsigned char* pData = (pktData.data()+ipHdrLen);
     uint32_t size = 0;
     libnet_ptag_t ip_ptag = 0; 
-    if (ip.ipProt == PROTO_ICMP){
+    if (ip->protocol == PROTO_ICMP){
         size = trans.len;
-    } else if (ip.ipProt == PROTO_UDP) {
+    } else if (ip->protocol == PROTO_UDP) {
         int checkerr = libnet_build_udp(
             trans.sport,
             trans.dport,
             trans.len,
             0,
-            pktData.data()+ip.ipHdrLen+8,
+            pktData.data()+ipHdrLen+8,
             trans.len - 8,
             l_,
             0);
@@ -34,7 +49,7 @@ void Output::popHandler(const boost::system::error_code& ec, const PacketPtr pkt
         }            
         pData = NULL;
         size = 0;
-    } else if (ip.ipProt == PROTO_TCP) {
+    } else if (ip->protocol == PROTO_TCP) {
         // build tcp header 
         struct tcpParams tcp = pkt->getTcpParams();
         if (tcp.tcpPayloadSize == 0){
@@ -65,7 +80,7 @@ void Output::popHandler(const boost::system::error_code& ec, const PacketPtr pkt
             tcp.win,
             0,
             tcp.urg,
-            ip.ipHdrLen+20+tcp.tcpOptionsSize+tcp.tcpPayloadSize,
+            ipHdrLen+20+tcp.tcpOptionsSize+tcp.tcpPayloadSize,
             tcp.tcpPayload,
             tcp.tcpPayloadSize,
             l_,
@@ -83,22 +98,22 @@ void Output::popHandler(const boost::system::error_code& ec, const PacketPtr pkt
     }
 
 #ifdef TRACE_LOG
-    std::cout << "ip size: " << size << " sending to ip " << ip.ipDst << " from " << ip.ipSrc << std::endl;
+    std::cout << "ip size: " << size << " sending to ip " << ntohl(ip->daddr) << " from " << ntohl(ip->saddr) << std::endl;
 #endif
     ip_ptag = libnet_build_ipv4(
-        ip.ipLen, /* length */
-        ip.ipTos,	  /* TOS */
-        pkt->getFragmentID(),    /* IP fragment ID */
-        pkt->getFragmentFlags(), /* IP Frag flags*/
-        ip.ipTtl,        /* TTL */
-        ip.ipProt,  /* protocol */
-        0,                        /* checksum (let libnet calculate) */
-        htonl(ip.ipSrc),  /* source IP */
-        htonl(ip.ipDst),  /* destination IP */
-        pData,                    /* payload */
-        size, /* payload size */
-        l_,                        /* libnet handle */
-        ip_ptag);                 /* libnet id */
+        ntohs(ip->tot_len),      // length
+        ip->tos,                 // TOS
+        pkt->getFragmentID(),    // IP fragment ID
+        pkt->getFragmentFlags(), // IP Frag flags
+        ip->ttl,                 // TTL
+        ip->protocol,            // protocol
+        0,                       // checksum (let libnet calculate)
+        htonl(pkt->getSourceIP()),      // source IP
+        htonl(pkt->getDestinationIP()), // destination IP
+        pData,                   // payload
+        size,                    // payload size
+        l_,                      // libnet handle
+        ip_ptag);                // libnet id
 
 
     if (ip_ptag == -1) {
