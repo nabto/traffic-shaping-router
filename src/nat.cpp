@@ -24,8 +24,8 @@ std::ostream& operator<<(std::ostream& os, const ConnectionTuple& ct) {
 //#define TRACE_LOG
 
 Nat::Nat(std::string ipExt, std::string ipInt): ipExt_(inet_network(ipExt.c_str())), ipInt_(inet_network(ipInt.c_str())){
-    std::cout << std::endl << " ======== NAT INIT ======= " << std::endl;
-    std::cout << " ipExt: " << ipExt_ << " intIp: " << ipInt_ << std::endl;
+    std::cout << std::endl << "======== NAT INIT ======= " << std::endl;
+    std::cout << "ipExt: " << ipExt_ << " intIp: " << ipInt_ << std::endl;
 }
 
 

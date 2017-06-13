@@ -6,7 +6,7 @@
 #include "filter.hpp"
 #include "shaper.hpp"
 #include "nat.hpp"
-
+#include "async_queue.hpp"
 
 class Router;
 typedef std::shared_ptr<Router> RouterPtr;
@@ -21,6 +21,8 @@ class Router : public Filter, public std::enable_shared_from_this<Router>
     bool execute();
     int newPacket(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, void *data);
     void handlePacket(PacketPtr pkt);
+    void popHandler(const boost::system::error_code& ec, const PacketPtr pkt);
+    
     void setDelay(int del){delayMs_ = del;}
     void setLoss(float loss){lossProb_ = loss;}
     void setExtIf(std::string ifExt){ifExt_ = ifExt;}
@@ -30,6 +32,8 @@ class Router : public Filter, public std::enable_shared_from_this<Router>
 
     
  private:
+    std::shared_ptr<TpService> tp_;
+    AsyncQueue<PacketPtr> queue_;
     std::vector<Packet> packets_;
     std::shared_ptr<StaticDelay> delay_;
     std::shared_ptr<Loss> loss_;

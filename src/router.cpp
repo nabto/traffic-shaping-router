@@ -5,26 +5,34 @@
 #include <iostream>
 #include <mutex>
 #include <stdint.h>
-#include "router.hpp"
 #include <functional>
 #include <errno.h>
 
+#include "router.hpp"
+#include "tpService.hpp"
 
 extern "C" {
 #include <libnetfilter_queue/libnetfilter_queue.h>
 #include <linux/netfilter.h>
 }
 
-#define RECV_BUF_SIZE 4096
+#define RECV_BUF_SIZE 65536
 
 static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, void *data) {
     RouterPtr rt = Router::getInstance();
     return rt->newPacket(qh,nfmsg,nfa,data);
 }
 
-Router::Router() {
+Router::Router(): queue_(*(TpService::getInstance()->getIoService())) {
     lossProb_ = 0;
     delayMs_ = 0;
+
+}
+
+void Router::popHandler(const boost::system::error_code& ec, const PacketPtr pkt) {
+    pkt->send();
+
+    queue_.asyncPop(std::bind(&Router::popHandler, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 }
 
 void Router::init() {
@@ -37,15 +45,17 @@ void Router::init() {
     nat_->setNext(delay_);
     delay_->setNext(self);
 
+    delay_->init();
     nat_->setDnatRule("10.0.2.2", 5201, 5201);
-
+    queue_.asyncPop(std::bind(&Router::popHandler, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 }
 
 Router::~Router() {
 }
 
 void Router::handlePacket(PacketPtr pkt) {
-    pkt->send();
+    // pkt->send();
+    queue_.push(pkt);
 }
 
 int Router::newPacket(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, void *data)

@@ -22,7 +22,7 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *
 	return rt->newPacket(qh,nfmsg,nfa,data);
 }
 
-Router::Router(){
+Router::Router(): queue_(*(TpService::getInstance()->getIoService())){
 }
 
 void Router::init(){

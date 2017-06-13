@@ -6,23 +6,21 @@
 class ConnectionTuple : public std::enable_shared_from_this<ConnectionTuple>
 {
  public:
-    ConnectionTuple(PacketPtr pkt){
+    ConnectionTuple(PacketPtr pkt) {
         srcIp_ = pkt->getSourceIP();
         dstIp_ = pkt->getDestinationIP();
         sport_ = pkt->getSourcePort();
         dport_ = pkt->getDestinationPort();
         proto_ = pkt->getProtocol();
     }
-    ConnectionTuple(uint32_t srcIp, uint32_t dstIp, uint16_t srcPort, uint16_t dstPort, uint8_t proto){
+    ConnectionTuple(uint32_t srcIp, uint32_t dstIp, uint16_t srcPort, uint16_t dstPort, uint8_t proto) {
         srcIp_ = srcIp;
         dstIp_ = dstIp;
         sport_ = srcPort;
         dport_ = dstPort;
         proto_ = proto;
     }
-    ConnectionTuple(){
-        std::cout << "\nTHIS SHOULD NOT BE CALLED\n" << std::endl;
-    }
+    ConnectionTuple() {}
     void setSrcIP(const uint32_t src){srcIp_ = src;}
     void setDstIP(const uint32_t dst){dstIp_ = dst;}
     void setSport(const uint16_t sport){sport_ = sport;}

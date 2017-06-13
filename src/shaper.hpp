@@ -11,6 +11,7 @@
 #include "filter.hpp"
 #include "packet.hpp"
 #include "tpService.hpp"
+#include "async_queue.hpp"
 #include <queue>
 #include <mutex>
 
@@ -20,14 +21,16 @@ class StaticDelay : public Filter, public std::enable_shared_from_this<StaticDel
     StaticDelay(int delay);
     ~StaticDelay();
     void handlePacket(PacketPtr pkt);
-    void queueTimeEvent();
-
+    //void queueTimeEvent();
+    void popHandler(const boost::system::error_code& ec, const PacketPtr pkt);
+    void init();
  private:
-    void scheduleEvent();
+//    void scheduleEvent();
     boost::posix_time::time_duration delay_;
     std::shared_ptr<TpService>  tp_;
     std::mutex mutex_;
-    std::queue<PacketPtr> queue_;
+    //std::queue<PacketPtr> queue_;
+    AsyncQueue<PacketPtr> queue_;
     boost::asio::io_service* ioService_;
 };
 
