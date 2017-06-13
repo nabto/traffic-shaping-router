@@ -4,7 +4,6 @@
 #include <netinet/tcp.h>
 #include <netinet/ip.h>
 
-
 Output::Output(): queue_(*(TpService::getInstance()->getIoService())) {
     l_ = libnet_init(LIBNET_RAW4, "",errbuf_);
 }
@@ -116,7 +115,7 @@ void Output::popHandler(const boost::system::error_code& ec, const PacketPtr pkt
     }
 
 #ifdef TRACE_LOG
-    std::cout << "ip size: " << size << " sending to ip " << ntohl(ip->daddr) << " from " << ntohl(ip->saddr) << std::endl;
+    std::cout << "ip size: " << size << " sending to ip " << pkt->getDestinationIP() << " from " << pkt->getSourceIP() << std::endl;
 #endif
     ip_ptag = libnet_build_ipv4(
         ntohs(ip->tot_len),      // length
