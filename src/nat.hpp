@@ -25,7 +25,10 @@ class Nat : public Filter, public std::enable_shared_from_this<Nat>
     std::vector<std::pair<ConnectionTuple,ConnectionEntryWeakPtr>> extConn_;
     std::map<uint16_t, ConnectionTuple> dnatRules;
 
+    void makeNewConn(ConnectionTuple extTup, ConnectionTuple intTup);
     void removeFromMaps(ConnectionTuple tuple);
+    int findIntConn(ConnectionTuple tup);
+    int findExtConn(ConnectionTuple tup);
 };
 
 #endif // NAT_HPP

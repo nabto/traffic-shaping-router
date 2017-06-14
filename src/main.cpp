@@ -18,10 +18,10 @@ int main (int argc, char* argv[])
         ("help,h", "Print usage message")
         ("ext_ip", po::value<std::string>()->composing(), "The ip of the external interface of the router")
         ("int_ip", po::value<std::string>()->composing(), "The ip of the internal interface of the router")
-        ("del,d", po::value<int>()->composing(), "The network delay to be imposed")
+        ("del,d", po::value<int>()->composing(), "The network delay in ms to be imposed")
         ("loss,l", po::value<float>()->composing(), "The packet loss probability")
-        ("ext_nat,e", po::value<std::vector<uint16_t> >()->multitoken(),"External port numbers for port forwarding, if defined must have same length as int_nat")
-        ("int_nat,i", po::value<std::vector<uint16_t> >()->multitoken(),"Internal port numbers for port forwarding, if defined must have same length as ext_nat")
+        ("ext_nat,e", po::value<std::vector<uint16_t> >()->multitoken(),"External port numbers for port forwarding")
+        ("int_nat,i", po::value<std::vector<uint16_t> >()->multitoken(),"Internal port numbers for port forwarding, if defined must have same length as ext_nat, if not defined ext_nat will be reused for internal ports")
         ;
 
     po::variables_map vm;
@@ -54,15 +54,13 @@ int main (int argc, char* argv[])
     if (vm.count("del")){
         del = vm["del"].as<int>();
     } else {
-        std::cerr << "del is required" << std::endl << desc << std::endl;
-        exit(1);
+        del = 0;
     }
     
     if (vm.count("loss")){
         los = vm["loss"].as<float>();
     } else {
-        std::cerr << "loss is required" << std::endl << desc << std::endl;
-        exit(1);
+        los = 0;
     }
 
     if (vm.count("ext_nat")){
@@ -70,8 +68,8 @@ int main (int argc, char* argv[])
             extNat = vm["ext_nat"].as<std::vector<uint16_t> >();
             intNat = vm["int_nat"].as<std::vector<uint16_t> >();
         } else {
-            std::cerr << "ext_nat was set without int_nat, they must have same length" << std::endl << desc << std::endl;
-            exit(1);
+            extNat = vm["ext_nat"].as<std::vector<uint16_t> >();
+            intNat = vm["ext_nat"].as<std::vector<uint16_t> >();
         }
         if(extNat.size() != intNat.size()){
             std::cerr << "ext_nat was not same length as int_nat" << std::endl << desc << std::endl;

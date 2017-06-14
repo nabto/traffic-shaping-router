@@ -23,8 +23,6 @@ echo `ip route show to match 8.8.8.8 | awk '{print $5}'`
 oip=`ip -4 route get 8.8.8.8 | awk {'print $7'} | tr -d '\n'`
 echo `ip -4 route get 8.8.8.8 | awk {'print $7'} | tr -d '\n'`
 iip=${1}
-is=`ip -4 route get ${1} | grep ${1} | awk {'print $3'}`
-echo `ip -4 route get ${1} | grep ${1} | awk {'print $3'}`
 mkdir -p /data
 
 tcpdump -i any -s 65535 -w /data/${DUMPNAME}.dump -W 1 -C 100000000 -U &
@@ -48,7 +46,6 @@ iptables -A INPUT -j NFQUEUE --queue-num 0
 echo "starting Router from bash"
 echo router -d 5 -l 0 --ext_ip $oip --int_ip $iip -e 5201 -i 5201 &
 router -d 5 -l 0 --ext_ip $oip --int_ip $iip -e 5201 -i 5201 &
-echo "Router started from bash"
 echo $(($(date +%s%N)/1000000))
 
 

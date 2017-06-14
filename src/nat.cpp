@@ -34,10 +34,6 @@ void Nat::removeFromMaps(ConnectionTuple tuple){
         if (intConn_[i].first == tuple){
             intConn_.erase(intConn_.begin()+i);
             extConn_.erase(extConn_.begin()+i);
-#ifdef TRACE_LOG
-            std::cout << "intMap size from remove: " << intConn_.size() << std::endl;
-            std::cout << "extMap size from remove: " << extConn_.size() << std::endl;
-#endif
             break;
         }
     }
@@ -51,37 +47,22 @@ void Nat::handlePacket(PacketPtr pkt) {
         tuple.setDport(pkt->getIcmpId());
     }
     if(pkt->getSourceIP() == ipInt_) {
-#ifdef TRACE_LOG
-        std::cout << "Internal Packet" << std::endl;
-#endif
+        // INTERNAL PACKET
         std::lock_guard<std::mutex> lock(mutex_);
-        for(size_t i = 0 ; i < intConn_.size(); i++){
-            if(intConn_[i].first == tuple){
-                // Connection found
-                auto ent = intConn_[i].second.lock();
-                ent->rearm();
-                pkt->setSourceIP(extConn_[i].first.getDstIP());
-                pkt->setSourcePort(extConn_[i].first.getDport());
-                next_->handlePacket(pkt);
+        int i = findIntConn(tuple);
+        if(i != -1){
+            // Connection found performing SNAT
+            auto ent = intConn_[i].second.lock();
+            ent->rearm();
+            pkt->setSourceIP(extConn_[i].first.getDstIP());
+            pkt->setSourcePort(extConn_[i].first.getDport());
+            next_->handlePacket(pkt);
 #ifdef TRACE_LOG
-                std::cout << "found Connection passing it with:\n\tsrcIp: " << pkt->getSourceIP()
-                          << "\n\tSport: " << pkt->getSourcePort() << std::endl;
+            std::cout << "found Connection for internal packet passing it with:\n\tsrcIp: "
+                      << pkt->getSourceIP() << "\n\tSport: " << pkt->getSourcePort() << std::endl;
 #endif
-                return;
-            }
+            return;
         }
-#ifdef TRACE_LOG
-        std::cout << "Connection not found, making new:" << std::endl;
-#endif
-        auto self = shared_from_this();
-        ConnectionEntryPtr entry = ConnectionEntryPtr(new ConnectionEntry(CONNECTION_TIMEOUT),
-                                                      [self,tuple](ConnectionEntry* obj){
-                                                          self->removeFromMaps(tuple);
-                                                          delete obj;
-                                                      });
-        entry->start();
-        intConn_.push_back(std::make_pair(tuple,entry));
-
         // ============================
         // IF PORT NUMBER SHOULD CHANGE
         // THROUGH THE ROUTER IT SHOULD
@@ -92,54 +73,53 @@ void Nat::handlePacket(PacketPtr pkt) {
                                         tuple.getDport(),
                                         tuple.getSport(),
                                         pkt->getProtocol());
-        
-        extConn_.push_back(std::make_pair(extTuple,entry));
-        pkt->setSourceIP(ipExt_);
+        makeNewConn(extTuple,tuple);
+        pkt->setSourceIP(extTuple.getDstIP());
+        pkt->setSourcePort(extTuple.getDport());
         
 #ifdef TRACE_LOG
-        std::cout << "Passing packet with:\n\tsrcIp: " << pkt->getSourceIP()
-                  << "\n\tSport: " << pkt->getSourcePort() << std::endl;
+        std::cout << "Made new connection for internal packet. Passing packet with:\n\tsrcIp: "
+                  << pkt->getSourceIP() << "\n\tSport: " << pkt->getSourcePort() << std::endl;
 #endif
         next_->handlePacket(pkt);
     } else {
-
-#ifdef TRACE_LOG
-        std::cout << "External Packet" << std::endl;
-#endif
+        // EXTERNAL PACKET
         std::lock_guard<std::mutex> lock(mutex_);
-        if(dnatRules.count(pkt->getDestinationPort()) == 1){
+        int i = findExtConn(tuple);
+        if(i != -1) {
+            // Connection found
+            auto ent = extConn_[i].second.lock();
+            ent->rearm();
+            pkt->setDestinationIP(intConn_[i].first.getSrcIP());
+            pkt->setDestinationPort(intConn_[i].first.getSport());
+            next_->handlePacket(pkt);
 #ifdef TRACE_LOG
-            std::cout << "Invoking Dnat rule" << std::endl;
+            std::cout << "found Connection for external packet passing it with:\n\tdstIp: "
+                      << pkt->getDestinationIP() << "\n\tdport: " << pkt->getDestinationPort()
+                      << std::endl;
 #endif
-            pkt->setDestinationIP(dnatRules[pkt->getDestinationPort()].getDstIP());
-            pkt->setDestinationPort(dnatRules[pkt->getDestinationPort()].getDport());
+            return;
+        }else if(dnatRules.count(pkt->getDestinationPort()) == 1){
+            auto intTuple = ConnectionTuple(dnatRules[pkt->getDestinationPort()].getDstIP(),
+                                            tuple.getSrcIP(),
+                                            dnatRules[pkt->getDestinationPort()].getDport(),
+                                            tuple.getSport(),
+                                            tuple.getProto());
+            makeNewConn(tuple, intTuple);
+            pkt->setDestinationIP(intTuple.getSrcIP());
+            pkt->setDestinationPort(intTuple.getSport());
             next_->handlePacket(pkt);
 
 #ifdef TRACE_LOG
-            std::cout << "passing packet with:\n\tdstIp: " << pkt->getDestinationIP()
+            std::cout << "Found DNAT rule passing packet with:\n\tdstIp: " << pkt->getDestinationIP()
                       << "\n\tdport: " << pkt->getDestinationPort() << std::endl;
 #endif
             
-        } else {
-            for(size_t i = 0 ; i < extConn_.size(); i++){
-                if(extConn_[i].first == tuple){
-                    // Connection found
-                    auto ent = extConn_[i].second.lock();
-                    ent->rearm();
-                    pkt->setDestinationIP(intConn_[i].first.getSrcIP());
-                    pkt->setDestinationPort(intConn_[i].first.getSport());
-                    next_->handlePacket(pkt);
-#ifdef TRACE_LOG
-                    std::cout << "found Connection passing it with:\n\tdstIp: " << pkt->getDestinationIP()
-                              << "\n\tdport: " << pkt->getDestinationPort() << std::endl;
-#endif
-                    return;
-                }
-            }
-#ifdef TRACE_LOG
-            std::cout << "Dropping packet, no connection found for tuple: " << std::endl << tuple << std::endl;
-#endif
         }
+#ifdef TRACE_LOG
+        std::cout << "Dropping external packet, no connection found for tuple: " << std::endl
+                  << tuple << std::endl;
+#endif
     }
 }
 
@@ -163,3 +143,38 @@ void Nat::setIPs(std::string ipExt, std::string ipInt) {
     ipExt_ = inet_network(ipExt.c_str());
     ipInt_=inet_network(ipInt.c_str());
 }
+
+void Nat::makeNewConn(ConnectionTuple extTup, ConnectionTuple intTup){
+    auto self = shared_from_this();
+
+    ConnectionEntryPtr entry = ConnectionEntryPtr(new ConnectionEntry(CONNECTION_TIMEOUT),
+                                                  [self,intTup](ConnectionEntry* obj){
+                                                      self->removeFromMaps(intTup);
+                                                      delete obj;
+                                                  });
+    intConn_.push_back(std::make_pair(intTup,entry));
+    extConn_.push_back(std::make_pair(extTup,entry));
+    entry->start();
+}
+
+
+int Nat::findIntConn(ConnectionTuple tup){
+    for(size_t i = 0 ; i < intConn_.size(); i++){
+        if(intConn_[i].first == tup){
+            // Connection found
+            return i;
+        }
+    }
+    return -1;
+}
+
+int Nat::findExtConn(ConnectionTuple tup){
+    for(size_t i = 0 ; i < extConn_.size(); i++){
+        if(extConn_[i].first == tup){
+            // Connection found
+            return i;
+        }
+    }
+    return -1;
+}
+

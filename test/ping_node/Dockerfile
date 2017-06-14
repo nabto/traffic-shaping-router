@@ -1,6 +1,6 @@
 FROM tianon/debian:jessie
 
-RUN apt-get update && apt-get install -y iproute net-tools iptables libgoogle-perftools-dev dnsutils psmisc procps  tcpdump less dnsutils wget ethtool --force-yes
+RUN apt-get update && apt-get install -y iproute net-tools iptables libgoogle-perftools-dev dnsutils psmisc procps  tcpdump less dnsutils wget ethtool iperf3 --force-yes
 
 ADD pipework /usr/bin/
 RUN echo 'root:nabto123' |chpasswd
