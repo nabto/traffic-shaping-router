@@ -10,7 +10,7 @@ add_library(shaper_src shaper.cpp)
 add_library(output_src output.cpp)
 include_directories("/usr/include/boost")
 set(CFLAGS "-fPIC -Wall -Werror -g")
-
+add_definitions(-std=c++11)
 add_definitions(${CFLAGS})
 
 if (CMAKE_BUILD_TYPE MATCHES "Debug")

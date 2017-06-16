@@ -25,7 +25,7 @@ class StaticDelay : public Filter, public std::enable_shared_from_this<StaticDel
     // Packet handler putting packets into async queue and returning
     void handlePacket(PacketPtr pkt);
     // PopHandler pops packets from the async queue and delays them
-    void popHandler(const boost::system::error_code& ec, const PacketPtr pkt);
+    void popHandler(const std::error_code& ec, const PacketPtr pkt);
     // set function for configuration
     void setDelay(int delay) {delay_ = boost::posix_time::milliseconds(delay);}
  private:

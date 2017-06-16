@@ -20,7 +20,7 @@ void Output::handlePacket(PacketPtr pkt) {
     queue_.push(pkt);
 }
 
-void Output::popHandler(const boost::system::error_code& ec, const PacketPtr pkt) {
+void Output::popHandler(const std::error_code& ec, const PacketPtr pkt) {
     if(l_ == NULL){
         std::cout << "Libnet_init() Failed: " << errbuf_ << std::endl <<  "\tretrying: " << std::endl;
         l_ = libnet_init(LIBNET_RAW4,"",errbuf_);

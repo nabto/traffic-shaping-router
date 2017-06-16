@@ -19,7 +19,7 @@ void StaticDelay::handlePacket(PacketPtr pkt) {
     queue_.push(pkt);
 }
 
-void StaticDelay::popHandler(const boost::system::error_code& ec, const PacketPtr pkt) {
+void StaticDelay::popHandler(const std::error_code& ec, const PacketPtr pkt) {
     boost::posix_time::time_duration delay;
     boost::posix_time::ptime now(boost::posix_time::microsec_clock::local_time());
     delay = delay_ - (now - pkt->getTimeStamp());

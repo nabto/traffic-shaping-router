@@ -10,21 +10,99 @@
 #include <boost/thread/mutex.hpp>
 
 
-enum asyncQueue::errc
-{
-    stopped,
+// =============== ERROR CODE DEFINITIONS ===============
+enum class queue_error_code : int {
+    stopped = 1,
     ok
 };
 
-template<>
-struct std::is_error_code_enum<asyncQueue::errc> : public std::true_type {};
+class queue_error_category_impl : public std::error_category
+{
+    const char* name () const noexcept override {
+        return "AsyncQueue";
+    }
+
+    std::string  message (int ec) const override {
+        std::string msg;
+        switch (queue_error_code(ec)) {
+        case queue_error_code::stopped:
+            msg = "Queue stopped.";
+            break;
+        case queue_error_code::ok:
+            msg = "OK";
+            break;
+        default:
+            msg = "unknown.";
+        }
+        return msg;
+    }
+
+    std::error_condition default_error_condition (int ec) const noexcept override
+    {
+        return std::error_condition(ec, *this);
+    }
+};
+
+// unique instance of the error category
+struct queue_error_category
+{
+    static const std::error_category& instance () noexcept
+    {
+        static queue_error_category_impl category;
+        return category;
+    }
+};
+
+// overload for error code creation
+inline std::error_code make_error_code (queue_error_code ec) noexcept
+{
+    return std::error_code(static_cast<int>(ec), queue_error_category::instance());
+}
+
+// overload for error condition creation
+inline std::error_condition make_error_condition (queue_error_code ec) noexcept
+{
+    return std::error_condition(static_cast<int>(ec), queue_error_category::instance());
+}
+
+/**
+ * Exception type thrown by the lib.
+ */
+class queue_error : public virtual std::runtime_error
+{
+public:
+    explicit queue_error (queue_error_code ec) noexcept : std::runtime_error("AsyncQueue "), internal_code(make_error_code(ec)) {}
+
+    const char* what () const noexcept override {
+        return internal_code.message().c_str();
+    }
+
+    std::error_code code () const noexcept {
+        return internal_code;
+    }
+
+private:
+    std::error_code internal_code;
+};
+
+// specialization for error code enumerations
+// must be done in the std namespace
+
+    namespace std
+    {
+    template <>
+    struct is_error_code_enum<queue_error_code> : public true_type { };
+    }
+
+// =============== ASYNC QUEUE DEFINITION ===============
+
 
 template<typename Data>
 class AsyncQueue
 {
-    typedef boost::function<void (const boost::system::error_code& ec, const Data& data)> Callback;
+    typedef boost::function<void (const std::error_code& ec, const Data& data)> Callback;
 
-    std::queue<Callback> callbacks_;
+    Callback callback_;
     std::queue<Data> theQueue_;
 
  public:
@@ -49,7 +127,7 @@ class AsyncQueue
         tryPop();
     }
 
-    void asyncPop(boost::function<void (const boost::system::error_code& ec, const Data& data)> callback)
+    void asyncPop(boost::function<void (const std::error_code& ec, const Data& data)> callback)
         {
             {
                 boost::mutex::scoped_lock lock(mutex_);
@@ -58,14 +136,14 @@ class AsyncQueue
                     ioService_.post(boost::bind(AsyncQueue<Data>::stoppedHandler, callback));
                     return;
                 }
-                callbacks_.push(callback);
+                callback_ = callback;
             }
             tryPop();
         }
 
-    static void stoppedHandler(boost::function<void (const boost::system::error_code& ec, const Data& data)> callback) {
+    static void stoppedHandler(boost::function<void (const std::error_code& ec, const Data& data)> callback) {
         Data d;
-        boost::system::error_code e;
+        std::error_code e = queue_error_code::stopped;
         callback(e, d);
     }
 
@@ -89,13 +167,11 @@ class AsyncQueue
                 }
                 stopped_ = true;
             }
-
-            while (!callbacks_.empty()) {
-                Callback handler = callbacks_.front();
-                callbacks_.pop();
+            if(callback_) {
                 Data d;
-                boost::system::error_code e;
-                ioService_.post(boost::bind(handler, e, d));
+                std::error_code e = queue_error_code::stopped;
+                ioService_.post(boost::bind(callback_, e, d));
+                callback_ = NULL;
             }
             clear();
         }
@@ -109,40 +185,28 @@ class AsyncQueue
  private:
     
     void tryPop() {
-        Callback handler;
         Data d;
         bool found = false;
         {
             boost::mutex::scoped_lock lock(mutex_);
-            if (theQueue_.size() > 0 && callbacks_.size() > 0) {
-                handler = callbacks_.front();
-                callbacks_.pop();
+            if (theQueue_.size() > 0 && callback_) {
                 d = theQueue_.front();
                 theQueue_.pop();
                 found = true;
-             
             }
         }
         if (found) {
-            boost::system::error_code e;
-            ioService_.post(boost::bind(handler, e, d));
+            std::error_code e = queue_error_code::ok;
+            ioService_.post(boost::bind(callback_, e, d));
+            callback_ = NULL;
         } else {
             // This code is used for nice stopping of the queue where all data in the queue is read before it's closed.
-            bool emptyHandlers  = false;
-            {
-                boost::mutex::scoped_lock lock(mutex_);
-                if (theQueue_.size() == 0 && niceStopped_ == true) {
-                    emptyHandlers = true;
-                }
-            }
-            if (emptyHandlers) {
-                while (!callbacks_.empty()) {
-                    Callback handler = callbacks_.front();
-                    callbacks_.pop();
-                    Data d;
-                    boost::system::error_code e;
-                    ioService_.post(boost::bind(handler, e, d));
-                }
+            boost::mutex::scoped_lock lock(mutex_);
+            if (theQueue_.size() == 0 && niceStopped_ == true && callback_) {
+                Data d;
+                std::error_code e = queue_error_code::stopped;
+                ioService_.post(boost::bind(callback_, e, d));
+                callback_ = NULL;
             }
         }
     }
