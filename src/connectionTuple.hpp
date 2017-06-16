@@ -2,7 +2,7 @@
 #include "packet.hpp"
 
 
-
+// ConnectionTuple contains connection information for the Nat filter
 class ConnectionTuple : public std::enable_shared_from_this<ConnectionTuple>
 {
  public:

@@ -9,6 +9,16 @@
 #include <boost/system/error_code.hpp>
 #include <boost/thread/mutex.hpp>
 
+
+enum asyncQueue::errc
+{
+    stopped,
+    ok
+};
+
+template<>
+struct std::is_error_code_enum<asyncQueue::errc> : public std::true_type {};
+
 template<typename Data>
 class AsyncQueue
 {

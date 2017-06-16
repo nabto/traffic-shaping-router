@@ -16,68 +16,27 @@ extern "C" {
 #define PROTO_TCP 6
 #define PROTO_UDP 17
 
-struct ipParams
-{
-    uint16_t ipLen;
-    uint8_t	 ipTos;
-    uint16_t ipId;
-    uint16_t ipFrag;
-    uint8_t  ipTtl;
-    uint8_t  ipProt;
-    uint32_t ipSrc;
-    uint32_t ipDst;
-    uint8_t  ipHdrLen;    
-};
 
-struct transParams
-{
-    uint16_t sport;
-    uint16_t dport;
-    uint16_t len;
-};
-
-struct tcpParams
-{
-    uint32_t seq;
-    uint32_t ack;
-    uint8_t control;
-    uint16_t win;
-    uint16_t urg;
-    const uint8_t * tcpPayload;
-    uint32_t tcpPayloadSize;
-    uint8_t tcpOptionsSize;
-    uint8_t * tcpOptions;
-};
-
-struct icmpParams
-{
-    uint8_t icmpType;
-    uint8_t icmpCode;
-    uint16_t icmpId;
-};
-
+// Packet class containing a packet for processing
 class Packet;
 typedef std::shared_ptr<Packet> PacketPtr;
 
 class Packet
 {
  public:
-
     Packet(struct nfq_data *nfa);
-    // Construct empty packet for testing purposes
+    // Construct dummy packet for testing purposes
     Packet();
     ~Packet();
 		
-    
+    // set functions for changing IPs, Ports, and interfaces
     void setSourceIP(uint32_t ip) {srcIp_ = ip;}
     void setDestinationIP(uint32_t ip) {dstIp_ = ip;}
     void setSourcePort(uint16_t sport){sport_ = sport;}
     void setDestinationPort(uint16_t dport){dport_ = dport;}
     void setOutboundInterface(const std::string & out) {strOutboundInterface_ = out;}
 
-
-    void processAsync();
-
+    // Get functions for packet information
     const int getNetfilterID() const {return nfqID_;}
     const uint32_t getSourceIP() const {return srcIp_;}
     const uint32_t getDestinationIP() const {return dstIp_;}
@@ -91,8 +50,9 @@ class Packet
     void getInboundInterface(std::string & in) const {in = strInboundInterface_;}
     void getOutboundInterface(std::string & out) const {out = strOutboundInterface_;}
 
-    
+    // Function dumping packet data to stdout for debugging
     void dump();
+    // Timestamp is first set in the constructor, this can be retrieved and reset here
     void resetTimeStamp(){stamp_ = boost::posix_time::microsec_clock::local_time();}
     boost::posix_time::ptime getTimeStamp(){return stamp_;}
 

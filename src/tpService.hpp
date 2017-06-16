@@ -8,7 +8,7 @@
 #include <boost/asio.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
-
+// Thread pool service supplying worker threads for async operations
 class TpService : public std::enable_shared_from_this<TpService>
 {
  public:

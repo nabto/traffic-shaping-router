@@ -42,9 +42,6 @@ void Router::init() {
 Router::~Router() {
 }
 
-void Router::handlePacket(PacketPtr pkt) {
-}
-
 int Router::newPacket(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, void *data)
 {
     PacketPtr pkt = std::make_shared<Packet>(nfa);
@@ -116,3 +113,5 @@ bool Router::execute() {
 
     return true;  
 }
+
+void Router::handlePacket(PacketPtr pkt) {}

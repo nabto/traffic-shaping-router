@@ -1,6 +1,8 @@
 # traffic shaping router
 
-The Traffic shaping router is a linux router designed to emulate different network behaviour for the purpose of testing software. The router requires that traffic in the iptables INPUT and FORWARD chains is sent to the NFQUEUE number 0:
+The Traffic shaping router is a linux router designed to emulate different network behaviour for the purpose of testing software. The router is based on iptables, which takes all packets directly from the network interfaces, and sends them through a series of chains which can change packets and make decisions on where to send packets. Iptables uses 5 main chains, PREROUTING applies DNAT as the first chain when a packet is received on an interface. A routing decision is then made whether the packet is destined for the loacl host or is to be forwarded to another interface. Packets for the local host is send to the INPUT chain whereas packets for other hosts is send to the FORWARD chain. These chains can then apply firewall rules where unwanted packets can be dropped, and wanted packets can be passed on. Packets originating from the local host is send to the OUTPUT chain which can perform similar firewall actions. When a packet leaves the OUTPUT or FORWARD chains, they are sent to the POSTROUTING chain which applies SNAT before sending it out on the network interface.
+
+The router works by forwarding all packets coming into the INPUT and FORWARD chains to the user space by using nf queue. This means the firewall rules applied to these two chains should put packets into the nf queue (the router uses queue number 0). The commands for applying these rules is shown here:
 
 ```
 iptables -A FORWARD -j NFQUEUE --queue-num 0

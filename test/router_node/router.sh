@@ -22,7 +22,7 @@ os=`ip route show to match 8.8.8.8 | awk '{print $5}'`
 echo `ip route show to match 8.8.8.8 | awk '{print $5}'`
 oip=`ip -4 route get 8.8.8.8 | awk {'print $7'} | tr -d '\n'`
 echo `ip -4 route get 8.8.8.8 | awk {'print $7'} | tr -d '\n'`
-iip=${1}
+iip=${2}
 mkdir -p /data
 
 tcpdump -i any -s 65535 -w /data/${DUMPNAME}.dump -W 1 -C 100000000 -U &
@@ -36,7 +36,7 @@ iptables -A INPUT ! -i $os -j ACCEPT
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 #iptables -t nat -A POSTROUTING -o $os -p icmp -j MASQUERADE
-iptables -t raw -A OUTPUT ! -s $2 -j NOTRACK
+iptables -t raw -A OUTPUT ! -s $1 -j NOTRACK
 
 echo 1 > /proc/sys/net/ipv4/ip_forward
 

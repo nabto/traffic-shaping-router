@@ -4,6 +4,7 @@
 #include <memory>
 #include "packet.hpp"
 
+/* Filter class which all filters must inherit */
 class Filter{
  public:
     virtual void setNext(std::shared_ptr<Filter> next){next_ = next;}

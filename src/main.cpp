@@ -28,7 +28,7 @@ int main (int argc, char* argv[])
     try {
         po::store(po::parse_command_line(argc, argv, desc), vm);
     } catch (...) {
-        std::cerr << "Illegal options!\nUsage: basestation [options]\n" << desc;
+        std::cerr << "Illegal options!\nUsage: router [options]\n" << desc;
         exit(1);
     }
 

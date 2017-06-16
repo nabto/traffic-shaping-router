@@ -10,7 +10,7 @@ class ConnectionEntry;
 typedef std::shared_ptr<ConnectionEntry> ConnectionEntryPtr;
 typedef std::weak_ptr<ConnectionEntry> ConnectionEntryWeakPtr;
 
-
+// Class used to timeout connections in the Nat class
 class ConnectionEntry : public std::enable_shared_from_this<ConnectionEntry>
 {
  public:
