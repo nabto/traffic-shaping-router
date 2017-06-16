@@ -3,8 +3,8 @@
 
 #include "filter.hpp"
 #include "packet.hpp"
-#include "connectionEntry.hpp"
-#include "connectionTuple.hpp"
+#include "connection_entry.hpp"
+#include "connection_tuple.hpp"
 #include <mutex>
 
 

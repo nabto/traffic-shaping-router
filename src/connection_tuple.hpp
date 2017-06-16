@@ -1,3 +1,5 @@
+#pragma once
+
 #include <tuple>
 #include "packet.hpp"
 
@@ -32,11 +34,23 @@ class ConnectionTuple : public std::enable_shared_from_this<ConnectionTuple>
     uint16_t getDport(){return dport_;}
     uint8_t getProto(){return proto_;}
 
-    inline bool operator==(const ConnectionTuple& ct){
-        return (std::make_tuple(srcIp_, dstIp_, sport_, dport_, proto_) == std::make_tuple(ct.srcIp_, ct.dstIp_, ct.sport_, ct.dport_, ct.proto_));
+    inline bool operator==(const ConnectionTuple& ct) {
+        return (std::tie(srcIp_, dstIp_, sport_, dport_, proto_) == std::tie(ct.srcIp_, ct.dstIp_, ct.sport_, ct.dport_, ct.proto_));
     }
-    inline bool operator!=(const ConnectionTuple& ct){
-        return (std::make_tuple(srcIp_, dstIp_, sport_, dport_, proto_) != std::make_tuple(ct.srcIp_, ct.dstIp_, ct.sport_, ct.dport_, ct.proto_));
+    inline bool operator!=(const ConnectionTuple& ct) {
+        return (std::tie(srcIp_, dstIp_, sport_, dport_, proto_) != std::tie(ct.srcIp_, ct.dstIp_, ct.sport_, ct.dport_, ct.proto_));
+    }
+    inline bool operator<(const ConnectionTuple& ct) {
+        return (std::tie(srcIp_, dstIp_, sport_, dport_, proto_) < std::tie(ct.srcIp_, ct.dstIp_, ct.sport_, ct.dport_, ct.proto_));
+    }
+    inline bool operator>(const ConnectionTuple& ct) {
+        return (std::tie(srcIp_, dstIp_, sport_, dport_, proto_) > std::tie(ct.srcIp_, ct.dstIp_, ct.sport_, ct.dport_, ct.proto_));
+    }
+    inline bool operator<=(const ConnectionTuple& ct) {
+        return !(std::tie(srcIp_, dstIp_, sport_, dport_, proto_) > std::tie(ct.srcIp_, ct.dstIp_, ct.sport_, ct.dport_, ct.proto_));
+    }
+    inline bool operator>=(const ConnectionTuple& ct) {
+        return !(std::tie(srcIp_, dstIp_, sport_, dport_, proto_) < std::tie(ct.srcIp_, ct.dstIp_, ct.sport_, ct.dport_, ct.proto_));
     }
     friend std::ostream& operator<<(std::ostream& os, const ConnectionTuple& ct);
  private:

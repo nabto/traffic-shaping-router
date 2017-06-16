@@ -1,6 +1,8 @@
+#pragma once
 
 #include <memory>
-#include "tpService.hpp"
+#include "tp_service.hpp"
+#include "connection_tuple.hpp"
 #include <boost/asio.hpp>
 #include <boost/asio/steady_timer.hpp>
 

@@ -1,13 +1,26 @@
 cmake_minimum_required (VERSION 2.8)
 project (Router)
 
-add_library(tpservice_src tpService.cpp)
-add_library(test_router_src test_router.cpp)
-add_library(packet_src packet.cpp)
-add_library(nat_src nat.cpp)
-add_library(router_src router.cpp)
-add_library(shaper_src shaper.cpp)
-add_library(output_src output.cpp)
+set(target_src
+  tp_service.cpp
+  packet.cpp
+  nat.cpp
+  shaper.cpp
+  output.cpp
+  )
+
+set(router_src
+  ${target_src}
+  router.cpp
+  main.cpp
+  )
+
+set(test_router_src
+  ${target_src}
+  test_router.cpp
+  test_main.cpp
+  )
+
 include_directories("/usr/include/boost")
 set(CFLAGS "-fPIC -Wall -Werror -g")
 add_definitions(-std=c++11)
@@ -18,17 +31,11 @@ if (CMAKE_BUILD_TYPE MATCHES "Debug")
   add_definitions(-DTRACE_LOG=1)
 endif ()
 
-add_executable(test_router test_main.cpp)
-add_executable(router main.cpp)
+add_executable(test_router ${test_router_src})
+add_executable(router ${router_src})
 
 link_directories("/usr/lib/x86_64-linux-gnu")
 target_link_libraries(router
-  router_src
-  packet_src
-  nat_src
-  shaper_src
-  output_src
-  tpservice_src
   netfilter_queue
   nfnetlink
   boost_system
@@ -37,12 +44,6 @@ target_link_libraries(router
   boost_date_time
   libnet.so)
 target_link_libraries(test_router
-  test_router_src
-  packet_src
-  nat_src
-  shaper_src
-  output_src
-  tpservice_src
   netfilter_queue
   nfnetlink
   boost_system
