@@ -65,9 +65,7 @@ inline std::error_condition make_error_condition (queue_error_code ec) noexcept
     return std::error_condition(static_cast<int>(ec), queue_error_category::instance());
 }
 
-/**
- * Exception type thrown by the lib.
- */
+// Exception type thrown by the lib.
 class queue_error : public virtual std::runtime_error
 {
 public:
@@ -167,11 +165,16 @@ class AsyncQueue
                 }
                 stopped_ = true;
             }
-            if(callback_) {
+            if(callback_ != NULL) {
                 Data d;
+                Callback handler;
+                {
+                    boost::mutex::scoped_lock lock(mutex_);
+                    handler = callback_;
+                    callback_ = NULL;
+                }
                 std::error_code e = queue_error_code::stopped;
-                ioService_.post(boost::bind(callback_, e, d));
-                callback_ = NULL;
+                ioService_.post(boost::bind(handler, e, d));
             }
             clear();
         }
@@ -186,23 +189,25 @@ class AsyncQueue
     
     void tryPop() {
         Data d;
+        Callback handler;
         bool found = false;
         {
             boost::mutex::scoped_lock lock(mutex_);
-            if (theQueue_.size() > 0 && callback_) {
+            if (theQueue_.size() > 0 && callback_ != NULL) {
                 d = theQueue_.front();
                 theQueue_.pop();
                 found = true;
+                handler = callback_;
+                callback_ = NULL;
             }
         }
         if (found) {
             std::error_code e = queue_error_code::ok;
-            ioService_.post(boost::bind(callback_, e, d));
-            callback_ = NULL;
+            ioService_.post(boost::bind(handler, e, d));
         } else {
             // This code is used for nice stopping of the queue where all data in the queue is read before it's closed.
             boost::mutex::scoped_lock lock(mutex_);
-            if (theQueue_.size() == 0 && niceStopped_ == true && callback_) {
+            if (theQueue_.size() == 0 && niceStopped_ == true && callback_ != NULL) {
                 Data d;
                 std::error_code e = queue_error_code::stopped;
                 ioService_.post(boost::bind(callback_, e, d));

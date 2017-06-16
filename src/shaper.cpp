@@ -22,6 +22,10 @@ void StaticDelay::handlePacket(PacketPtr pkt) {
 void StaticDelay::popHandler(const std::error_code& ec, const PacketPtr pkt) {
     boost::posix_time::time_duration delay;
     boost::posix_time::ptime now(boost::posix_time::microsec_clock::local_time());
+    if(ec == queue_error_code::stopped){
+        std::cout << "StaticDelay popHandler got queue stopped" << std::endl;
+        return;
+    }
     delay = delay_ - (now - pkt->getTimeStamp());
     if (delay < boost::posix_time::milliseconds(0)){
         delay = boost::posix_time::milliseconds(0);
