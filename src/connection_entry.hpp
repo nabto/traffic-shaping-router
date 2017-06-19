@@ -16,19 +16,23 @@ typedef std::weak_ptr<ConnectionEntry> ConnectionEntryWeakPtr;
 class ConnectionEntry : public std::enable_shared_from_this<ConnectionEntry>
 {
  public:
-    ConnectionEntry(int timeout): timer_(*(TpService::getInstance()->getIoService())), timeout_(timeout) {}
+    ConnectionEntry(int timeout, ConnectionTuple extTup, ConnectionTuple intTup): timer_(*(TpService::getInstance()->getIoService())), timeout_(timeout), extTuple_(extTup), intTuple_(intTup) {}
     void start(){ armTimer();}
     void rearm(){ stop(); armTimer();}
     void stop(){
         boost::system::error_code ec;
         timer_.cancel(ec);
     }
+    ConnectionTuple getExtTup(){return extTuple_;}
+    ConnectionTuple getIntTup(){return intTuple_;}
 
  private:
     boost::asio::steady_timer timer_;
     int timeout_;
     std::mutex mutex_;
-    
+    ConnectionTuple extTuple_;
+    ConnectionTuple intTuple_;
+
     void armTimer() {
         std::lock_guard<std::mutex> lock(mutex_);
         boost::system::error_code ec;

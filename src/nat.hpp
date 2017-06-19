@@ -26,14 +26,12 @@ class Nat : public Filter, public std::enable_shared_from_this<Nat>
     uint32_t ipExt_;
     uint32_t ipInt_;
     std::mutex mutex_;
-    std::vector<std::pair<ConnectionTuple,ConnectionEntryWeakPtr>> intConn_;
-    std::vector<std::pair<ConnectionTuple,ConnectionEntryWeakPtr>> extConn_;
+    std::map<ConnectionTuple, ConnectionEntryWeakPtr> intConn_;
+    std::map<ConnectionTuple, ConnectionEntryWeakPtr> extConn_;
     std::map<uint16_t, ConnectionTuple> dnatRules;
 
     void makeNewConn(ConnectionTuple extTup, ConnectionTuple intTup);
-    void removeFromMaps(ConnectionTuple tuple);
-    int findIntConn(ConnectionTuple tup);
-    int findExtConn(ConnectionTuple tup);
+    void removeFromMaps(ConnectionTuple intTup, ConnectionTuple extTup);
 };
 
 #endif // NAT_HPP

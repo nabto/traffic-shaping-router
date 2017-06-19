@@ -14,7 +14,6 @@
 #include <net/if.h>
 #include <arpa/inet.h>
 
-
 #define CONNECTION_TIMEOUT 10 // seconds for now
 
 std::ostream& operator<<(std::ostream& os, const ConnectionTuple& ct) {
@@ -28,18 +27,17 @@ Nat::Nat(){
 
 Nat::~Nat(){}
 
-void Nat::removeFromMaps(ConnectionTuple tuple){
+void Nat::removeFromMaps(ConnectionTuple intTup, ConnectionTuple extTup){
     std::lock_guard<std::mutex> lock(mutex_);
-    for(size_t i = 0; i < intConn_.size(); i ++){
-        if (intConn_[i].first == tuple){
-            intConn_.erase(intConn_.begin()+i);
-            extConn_.erase(extConn_.begin()+i);
-            break;
-        }
-    }
+    intConn_.erase(intTup);
+    extConn_.erase(extTup);
 }
 
 void Nat::handlePacket(PacketPtr pkt) {
+#ifdef TRACE_LOG
+    std::cout << "new packet: " << std::endl;
+    pkt->dump();
+#endif
     auto tuple = ConnectionTuple(pkt);
     if(pkt->getProtocol() == PROTO_ICMP){
         // Using ICMP id like port numbers for nat purposes
@@ -48,14 +46,18 @@ void Nat::handlePacket(PacketPtr pkt) {
     }
     if(pkt->getSourceIP() == ipInt_) {
         // INTERNAL PACKET
-        std::lock_guard<std::mutex> lock(mutex_);
-        int i = findIntConn(tuple);
-        if(i != -1){
-            // Connection found performing SNAT
-            auto ent = intConn_[i].second.lock();
+        std::shared_ptr<ConnectionEntry> ent;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if(intConn_.find(tuple) != intConn_.end()){
+                // Connection found performing SNAT
+                ent = intConn_[tuple].lock();
+            }
+        }
+        if(ent) {
             ent->rearm();
-            pkt->setSourceIP(extConn_[i].first.getDstIP());
-            pkt->setSourcePort(extConn_[i].first.getDport());
+            pkt->setSourceIP(ent->getExtTup().getDstIP());
+            pkt->setSourcePort(ent->getExtTup().getDport());
             next_->handlePacket(pkt);
 #ifdef TRACE_LOG
             std::cout << "found Connection for internal packet passing it with:\n\tsrcIp: "
@@ -84,14 +86,18 @@ void Nat::handlePacket(PacketPtr pkt) {
         next_->handlePacket(pkt);
     } else {
         // EXTERNAL PACKET
-        std::lock_guard<std::mutex> lock(mutex_);
-        int i = findExtConn(tuple);
-        if(i != -1) {
+        std::shared_ptr<ConnectionEntry> ent;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if(extConn_.find(tuple) != extConn_.end()){
+                ent = extConn_[tuple].lock();
+            }
+        }
+        if(ent) {
             // Connection found
-            auto ent = extConn_[i].second.lock();
             ent->rearm();
-            pkt->setDestinationIP(intConn_[i].first.getSrcIP());
-            pkt->setDestinationPort(intConn_[i].first.getSport());
+            pkt->setDestinationIP(ent->getIntTup().getSrcIP());
+            pkt->setDestinationPort(ent->getIntTup().getSport());
             next_->handlePacket(pkt);
 #ifdef TRACE_LOG
             std::cout << "found Connection for external packet passing it with:\n\tdstIp: "
@@ -141,40 +147,19 @@ void Nat::removeDnatRule(uint16_t extPort){
 
 void Nat::setIPs(std::string ipExt, std::string ipInt) {
     ipExt_ = inet_network(ipExt.c_str());
-    ipInt_=inet_network(ipInt.c_str());
+    ipInt_ = inet_network(ipInt.c_str());
 }
 
 void Nat::makeNewConn(ConnectionTuple extTup, ConnectionTuple intTup){
     auto self = shared_from_this();
 
-    ConnectionEntryPtr entry = ConnectionEntryPtr(new ConnectionEntry(CONNECTION_TIMEOUT),
-                                                  [self,intTup](ConnectionEntry* obj){
-                                                      self->removeFromMaps(intTup);
+    ConnectionEntryPtr entry = ConnectionEntryPtr(new ConnectionEntry(CONNECTION_TIMEOUT, extTup, intTup),
+                                                  [self](ConnectionEntry* obj){
+                                                      self->removeFromMaps(obj->getIntTup(), obj->getExtTup());
                                                       delete obj;
                                                   });
-    intConn_.push_back(std::make_pair(intTup,entry));
-    extConn_.push_back(std::make_pair(extTup,entry));
+    intConn_[intTup] = entry;
+    extConn_[extTup] = entry;
     entry->start();
-}
-
-
-int Nat::findIntConn(ConnectionTuple tup){
-    for(size_t i = 0 ; i < intConn_.size(); i++){
-        if(intConn_[i].first == tup){
-            // Connection found
-            return i;
-        }
-    }
-    return -1;
-}
-
-int Nat::findExtConn(ConnectionTuple tup){
-    for(size_t i = 0 ; i < extConn_.size(); i++){
-        if(extConn_[i].first == tup){
-            // Connection found
-            return i;
-        }
-    }
-    return -1;
 }
 
