@@ -45,7 +45,7 @@ iptables -A INPUT -j NFQUEUE --queue-num 0
 
 echo "starting Router from bash"
 echo router -d 5 -l 0 --ext_ip $oip --int_ip $iip -e 5201 &
-router -d 5 -l 0 --ext_ip $oip --int_ip $iip -e 5201 &
+router -d 5 -l 0 --ext_ip $oip --int_ip $iip -e 5201 --sleep_dur 100 --burst_dur 30 &
 echo $(($(date +%s%N)/1000000))
 
 

@@ -28,15 +28,18 @@ Router::Router() {
 void Router::init() {
     loss_ = std::make_shared<Loss>();
     nat_ = std::make_shared<Nat>();
+    burst_ = std::make_shared<Burst>();
     delay_ = std::make_shared<StaticDelay>();
     output_ = std::make_shared<Output>();
     setNext(loss_);
     loss_->setNext(nat_);
-    nat_->setNext(delay_);
+    nat_->setNext(burst_);
+    burst_->setNext(delay_);
     delay_->setNext(output_);
 
     output_->init();
     delay_->init();
+    burst_->run();
 }
 
 Router::~Router() {

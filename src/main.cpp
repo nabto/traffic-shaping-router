@@ -11,6 +11,8 @@ int main (int argc, char* argv[])
     std::string intIp;
     int del = 0;
     float los = 0;
+    int burstDur = 0;
+    int sleepDur = 0;
     std::vector<uint16_t> extNat;
     std::vector<uint16_t> intNat;
     po::options_description desc("Allowed options");
@@ -20,6 +22,8 @@ int main (int argc, char* argv[])
         ("int_ip", po::value<std::string>()->composing(), "The ip of the internal interface of the router")
         ("del,d", po::value<int>()->composing(), "The network delay in ms to be imposed")
         ("loss,l", po::value<float>()->composing(), "The packet loss probability")
+        ("burst_dur", po::value<int>()->composing(), "The time in ms when packets are collected for bursts")
+        ("sleep_dur", po::value<int>()->composing(), "The time in ms between bursts")
         ("ext_nat,e", po::value<std::vector<uint16_t> >()->multitoken(),"External port numbers for port forwarding")
         ("int_nat,i", po::value<std::vector<uint16_t> >()->multitoken(),"Internal port numbers for port forwarding, if defined must have same length as ext_nat, if not defined ext_nat will be reused for internal ports")
         ;
@@ -63,6 +67,18 @@ int main (int argc, char* argv[])
         los = 0;
     }
 
+    if (vm.count("burst_dur")){
+       burstDur  = vm["burst_dur"].as<int>();
+    } else {
+        burstDur = 0;
+    }
+
+    if (vm.count("sleep_dur")){
+        sleepDur = vm["sleep_dur"].as<int>();
+    } else {
+        sleepDur = 0;
+    }
+
     if (vm.count("ext_nat")){
         if (vm.count("int_nat")){
             extNat = vm["ext_nat"].as<std::vector<uint16_t> >();
@@ -85,6 +101,8 @@ int main (int argc, char* argv[])
     for(size_t i = 0; i < extNat.size(); i++){
         rt->setDnatRule(intIp, extNat[i], intNat[i]);
     }
+    rt->setBurstDuration(burstDur);
+    rt->setSleepDuration(sleepDur);
     
     rt->execute();
 
