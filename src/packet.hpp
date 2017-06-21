@@ -46,6 +46,7 @@ class Packet
     const uint16_t getFragmentFlags() const {return ipFrag_ & 0xE000;}
     const uint16_t getFragmentID() const {return ipFrag_ & 0x1FFF;}
     const uint8_t getProtocol() const {return transProt_;}
+    const uint32_t getPacketLen() const {return (uint32_t)packetDataLen_;}
     const std::vector<uint8_t> getPacketData() const {return packetData_;}
     void getInboundInterface(std::string & in) const {in = strInboundInterface_;}
     void getOutboundInterface(std::string & out) const {out = strOutboundInterface_;}

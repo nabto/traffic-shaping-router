@@ -103,7 +103,7 @@ int main (int argc, char* argv[])
     }
     rt->setBurstDuration(burstDur);
     rt->setSleepDuration(sleepDur);
-    
+    rt->setTbfRateLimit(512);
     rt->execute();
 
 }

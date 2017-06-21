@@ -30,16 +30,19 @@ void Router::init() {
     nat_ = std::make_shared<Nat>();
     burst_ = std::make_shared<Burst>();
     delay_ = std::make_shared<StaticDelay>();
+    tbf_ = std::make_shared<TokenBucketFilter>();
     output_ = std::make_shared<Output>();
     setNext(loss_);
     loss_->setNext(nat_);
     nat_->setNext(burst_);
     burst_->setNext(delay_);
-    delay_->setNext(output_);
-
+    delay_->setNext(tbf_);
+    tbf_->setNext(output_);
+    
     output_->init();
     delay_->init();
     burst_->run();
+    tbf_->run();
 }
 
 Router::~Router() {

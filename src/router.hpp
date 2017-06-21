@@ -7,6 +7,7 @@
 #include "shaper.hpp"
 #include "nat.hpp"
 #include "burst_filter.hpp"
+#include "tbf_filter.hpp"
 #include "output.hpp"
 
 
@@ -37,7 +38,10 @@ class Router : public Filter, public std::enable_shared_from_this<Router>
     void setDnatRule(std::string ip, uint16_t extPort, uint16_t intPort) {nat_->setDnatRule(ip, extPort, intPort);}
     void setBurstDuration(int dur) {burst_->setBurstDuration(dur);}
     void setSleepDuration(int dur) {burst_->setSleepDuration(dur);}
-
+    void setTbfRateLimit(uint32_t rate) {tbf_->setRateLimit(rate);}
+    void setTbfMaxTokens(uint32_t t) {tbf_->setMaxTokens(t);}
+    void setTbfMaxPackets(uint32_t p) {tbf_->setMaxPackets(p);}
+    
     // Since router is the first filter, handlePacket is not used
     void handlePacket(PacketPtr pkt);
     
@@ -46,6 +50,7 @@ class Router : public Filter, public std::enable_shared_from_this<Router>
     std::shared_ptr<Loss> loss_;
     std::shared_ptr<Nat> nat_;
     std::shared_ptr<Burst> burst_;
+    std::shared_ptr<TokenBucketFilter> tbf_;
     std::shared_ptr<Output> output_;
 };
 
