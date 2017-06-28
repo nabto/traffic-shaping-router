@@ -1,0 +1,18 @@
+set(target_src
+   ${target_src}
+   ${CMAKE_CURRENT_SOURCE_DIR}/nat.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/shaper.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/output.cpp
+   PARENT_SCOPE
+)
+set(target_hdr
+   ${target_hdr}
+   ${CMAKE_CURRENT_SOURCE_DIR}/burst_filter.hpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/connection_entry.hpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/connection_tuple.hpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/nat.hpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/output.hpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/shaper.hpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/tbf_filter.hpp
+   PARENT_SCOPE
+)

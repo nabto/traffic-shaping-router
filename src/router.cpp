@@ -23,9 +23,11 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *
 }
 
 Router::Router() {
+    initialized_ = false;
 }
 
 void Router::init() {
+    std::cout << "using all filters" << std::endl;
     loss_ = std::make_shared<Loss>();
     nat_ = std::make_shared<Nat>();
     burst_ = std::make_shared<Burst>();
@@ -43,6 +45,58 @@ void Router::init() {
     delay_->init();
     burst_->run();
     tbf_->run();
+    initialized_ = true;
+}
+
+void Router::init(std::vector<std::string> filters) {
+    std::shared_ptr<Filter> last = shared_from_this();
+    for (auto it : filters){
+        if (it.compare("Burst") == 0){
+#ifdef TRACE_LOG
+            std::cout << "adding burst filter" << std::endl;
+#endif
+            burst_ = std::make_shared<Burst>();
+            last->setNext(burst_);
+            last = burst_;
+            burst_->run();
+        } else if (it.compare("Loss") == 0){
+#ifdef TRACE_LOG
+            std::cout << "adding Loss filter" << std::endl;
+#endif
+            loss_ = std::make_shared<Loss>();
+            last->setNext(loss_);
+            last = loss_;
+        } else if (it.compare("StaticDelay") == 0){
+#ifdef TRACE_LOG
+            std::cout << "adding StaticDelay filter" << std::endl;
+#endif
+            delay_ = std::make_shared<StaticDelay>();
+            last->setNext(delay_);
+            last = delay_;
+            delay_->init();
+        } else if (it.compare("Nat") == 0){
+#ifdef TRACE_LOG
+            std::cout << "adding Nat filter" << std::endl;
+#endif
+            nat_ = std::make_shared<Nat>();
+            last->setNext(nat_);
+            last = nat_;
+        } else if (it.compare("TokenBucketFilter") == 0){
+#ifdef TRACE_LOG
+            std::cout << "adding TokenBucketFilter filter" << std::endl;
+#endif
+            tbf_ = std::make_shared<TokenBucketFilter>();
+            last->setNext(tbf_);
+            last = tbf_;
+            tbf_->run();
+        } else {
+            std::cout << "unknown filter " << it << std::endl;
+        }
+    }
+    output_ = std::make_shared<Output>();
+    last->setNext(output_);
+    output_->init();
+    initialized_ = true;
 }
 
 Router::~Router() {
@@ -65,7 +119,6 @@ RouterPtr Router::getInstance() {
     std::lock_guard<std::mutex> lock(instanceMutex_);
     if ( !instance_ ) {
         instance_ = std::make_shared<Router>();
-        instance_->init();
     }
     return instance_;
 }
@@ -77,6 +130,10 @@ bool Router::execute() {
     int fd;
     int rv;
     char buf[RECV_BUF_SIZE];
+    if (!initialized_){
+        std::cout << "Router::execute() was called before Router::init()" << std::endl;
+        return false;
+    }
     h = nfq_open();
     if (!h) {
         std::cout << "error during nfq_open()" << std::endl;

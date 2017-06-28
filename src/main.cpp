@@ -16,16 +16,24 @@ int main (int argc, char* argv[])
     std::vector<uint16_t> extNat;
     std::vector<uint16_t> intNat;
     po::options_description desc("Allowed options");
+    RouterPtr rt = Router::getInstance();
+
     desc.add_options()
         ("help,h", "Print usage message")
-        ("ext_ip", po::value<std::string>()->composing(), "The ip of the external interface of the router")
-        ("int_ip", po::value<std::string>()->composing(), "The ip of the internal interface of the router")
-        ("del,d", po::value<int>()->composing(), "The network delay in ms to be imposed")
+        ("nat-ext-ip", po::value<std::string>()->composing(), "The ip of the external interface of the router (Required with Nat filter)")
+        ("nat-int-ip", po::value<std::string>()->composing(), "The ip of the internal interface of the router (Required with Nat filter)")
+        ("delay,d", po::value<int>()->composing(), "The network delay in ms to be imposed")
         ("loss,l", po::value<float>()->composing(), "The packet loss probability")
-        ("burst_dur", po::value<int>()->composing(), "The time in ms when packets are collected for bursts")
-        ("sleep_dur", po::value<int>()->composing(), "The time in ms between bursts")
-        ("ext_nat,e", po::value<std::vector<uint16_t> >()->multitoken(),"External port numbers for port forwarding")
-        ("int_nat,i", po::value<std::vector<uint16_t> >()->multitoken(),"Internal port numbers for port forwarding, if defined must have same length as ext_nat, if not defined ext_nat will be reused for internal ports")
+        ("tbf-rate", po::value<int>()->composing(), "The rate limit in kbit pr. sec. for the token bucket filter")
+        ("tbf-max-tokens", po::value<int>()->composing(), "The maximum amount of tokens for the token bucket filter")
+        ("tbf-max-packets", po::value<int>()->composing(), "The packet queue length of the token bucket filter")
+        ("tbf-red-start", po::value<int>()->composing(), "The packet queue length at which random early drop kick in")
+        ("tbf-red-drop", po::value<float>()->composing(), "The packet drop probability used for random early drop")
+        ("burst-dur", po::value<int>()->composing(), "The time in ms when packets are collected for bursts")
+        ("burst-sleep", po::value<int>()->composing(), "The time in ms between bursts")
+        ("nat-ext-port,e", po::value<std::vector<uint16_t> >()->multitoken(),"External port numbers for port forwarding")
+        ("nat-int-port,i", po::value<std::vector<uint16_t> >()->multitoken(),"Internal port numbers for port forwarding, if defined must have same length as nat-ext-port, if not defined nat-ext-port will be reused for internal ports")
+        ("filters" , po::value<std::vector<std::string> >()->multitoken(),"Ordered list of filters to use, valid filters are: StaticDelay, Loss, Nat, Burst, TokenBucketFilter")
         ;
 
     po::variables_map vm;
@@ -41,69 +49,95 @@ int main (int argc, char* argv[])
         exit(0);
     }
 
-    if (vm.count("ext_ip")){
-        extIp = vm["ext_ip"].as<std::string>();
+    if (vm.count("filters")){
+        std::cout << "using selected filters " << std::endl;
+        std::vector<std::string> filters = vm["filters"].as<std::vector<std::string> >();
+        rt->init(filters);
     } else {
-        std::cerr << "ext_ip is required" << std::endl << desc << std::endl;
-        exit(1);
+        rt->init();
     }
     
-    if (vm.count("int_ip")){
-        intIp = vm["int_ip"].as<std::string>();
-    } else {
-        std::cerr << "int_ip is required" << std::endl << desc << std::endl;
-        exit(1);
+    if (vm.count("nat-ext-ip")){
+        extIp = vm["nat-ext-ip"].as<std::string>();
     }
+    // else {
+    //     std::cerr << "ext-ip is required" << std::endl << desc << std::endl;
+    //     exit(1);
+    // }
     
-    if (vm.count("del")){
-        del = vm["del"].as<int>();
-    } else {
-        del = 0;
+    if (vm.count("nat-int-ip")){
+        intIp = vm["nat-int-ip"].as<std::string>();
+    }
+    // else {
+    //     std::cerr << "int-ip is required" << std::endl << desc << std::endl;
+    //     exit(1);
+    //}
+    rt->setIPs(extIp,intIp);
+    
+    if (vm.count("delay")){
+        del = vm["delay"].as<int>();
+        rt->setDelay(del);
     }
     
     if (vm.count("loss")){
         los = vm["loss"].as<float>();
-    } else {
-        los = 0;
+        rt->setLoss(los);
     }
 
-    if (vm.count("burst_dur")){
-       burstDur  = vm["burst_dur"].as<int>();
-    } else {
-        burstDur = 0;
+    if (vm.count("tbf-rate")){
+       int rate  = vm["tbf-rate"].as<int>();
+       rt->setTbfRateLimit(rate);
     }
 
-    if (vm.count("sleep_dur")){
-        sleepDur = vm["sleep_dur"].as<int>();
-    } else {
-        sleepDur = 0;
+    if (vm.count("tbf-max-tokens")){
+        int tbfTokens = vm["tbf-max-tokens"].as<int>();
+        rt->setTbfMaxTokens(tbfTokens);
     }
 
-    if (vm.count("ext_nat")){
-        if (vm.count("int_nat")){
-            extNat = vm["ext_nat"].as<std::vector<uint16_t> >();
-            intNat = vm["int_nat"].as<std::vector<uint16_t> >();
+    if (vm.count("tbf-max-packets")){
+        int tbfPackets = vm["tbf-max-packets"].as<int>();
+        rt->setTbfMaxPackets(tbfPackets);
+    }
+
+    if (vm.count("tbf-red-start")){
+        int tbfRedStart = vm["tbf-red-start"].as<int>();
+        rt->setTbfRedStart(tbfRedStart);
+    }
+
+    if (vm.count("tbf-red-drop")){
+        float tbfRedDrop = vm["tbf-red-drop"].as<float>();
+        rt->setTbfRedDrop(tbfRedDrop);
+    }
+
+    if (vm.count("burst-dur")){
+       burstDur  = vm["burst-dur"].as<int>();
+       rt->setBurstDuration(burstDur);
+    }
+
+    if (vm.count("burst-sleep")){
+        sleepDur = vm["burst-sleep"].as<int>();
+        rt->setSleepDuration(sleepDur);
+    }
+
+    if (vm.count("nat-ext-port")){
+        if (vm.count("nat-int-port")){
+            extNat = vm["nat-ext-port"].as<std::vector<uint16_t> >();
+            intNat = vm["nat-int-port"].as<std::vector<uint16_t> >();
         } else {
-            extNat = vm["ext_nat"].as<std::vector<uint16_t> >();
-            intNat = vm["ext_nat"].as<std::vector<uint16_t> >();
+            extNat = vm["nat-ext-port"].as<std::vector<uint16_t> >();
+            intNat = vm["nat-ext-port"].as<std::vector<uint16_t> >();
         }
         if(extNat.size() != intNat.size()){
-            std::cerr << "ext_nat was not same length as int_nat" << std::endl << desc << std::endl;
+            std::cerr << "nat-ext-port was not same length as nat-int-port" << std::endl << desc << std::endl;
             exit(1);
         }
     }
-    std::cout << "Router started with delay: " << del << ", loss: " << los << ", int IP: " << intIp << ", and ext IP " << extIp << std::endl;
-    RouterPtr rt = Router::getInstance();
-    
-    rt->setIPs(extIp,intIp);
-    rt->setDelay(del);
-    rt->setLoss(los);
+
     for(size_t i = 0; i < extNat.size(); i++){
         rt->setDnatRule(intIp, extNat[i], intNat[i]);
     }
-    rt->setBurstDuration(burstDur);
-    rt->setSleepDuration(sleepDur);
-    rt->setTbfRateLimit(512);
+
+    std::cout << "Router started with delay: " << del << ", loss: " << los << ", int IP: " << intIp << ", and ext IP " << extIp << std::endl;
     rt->execute();
 
 }
