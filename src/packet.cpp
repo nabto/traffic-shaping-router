@@ -95,6 +95,11 @@ void Packet::dump() {
     printf("\tInbound interface: %s\n",strInboundInterface_.c_str());
     printf("\tOutbound interface: %s\n",strOutboundInterface_.c_str());
     printf("\ttime stamp was: %s\n", boost::posix_time::to_simple_string(stamp_).c_str());
+    if(isIngoing_){
+        printf("\tPacket is Ingoing\n");
+    } else {
+        printf("\tPacket is Outgoing\n");
+    }
 
     // TODO: these two printfs will break if Network order != Host order
     printf("\tSource IP raw: %u\n", srcIp_);

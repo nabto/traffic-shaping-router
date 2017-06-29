@@ -24,11 +24,16 @@ int main (int argc, char* argv[])
         ("nat-int-ip", po::value<std::string>()->composing(), "The ip of the internal interface of the router (Required with Nat filter)")
         ("delay,d", po::value<int>()->composing(), "The network delay in ms to be imposed")
         ("loss,l", po::value<float>()->composing(), "The packet loss probability")
-        ("tbf-rate", po::value<int>()->composing(), "The rate limit in kbit pr. sec. for the token bucket filter")
-        ("tbf-max-tokens", po::value<int>()->composing(), "The maximum amount of tokens for the token bucket filter")
-        ("tbf-max-packets", po::value<int>()->composing(), "The packet queue length of the token bucket filter")
-        ("tbf-red-start", po::value<int>()->composing(), "The packet queue length at which random early drop kick in")
-        ("tbf-red-drop", po::value<float>()->composing(), "The packet drop probability used for random early drop")
+        ("tbf-in-rate", po::value<int>()->composing(), "The rate limit in kbit pr. sec. for the token bucket filter")
+        ("tbf-in-max-tokens", po::value<int>()->composing(), "The maximum amount of tokens for the token bucket filter")
+        ("tbf-in-max-packets", po::value<int>()->composing(), "The packet queue length of the token bucket filter")
+        ("tbf-in-red-start", po::value<int>()->composing(), "The packet queue length at which random early drop kick in")
+        ("tbf-in-red-drop", po::value<float>()->composing(), "The packet drop probability used for random early drop")
+        ("tbf-out-rate", po::value<int>()->composing(), "The rate limit in kbit pr. sec. for the token bucket filter")
+        ("tbf-out-max-tokens", po::value<int>()->composing(), "The maximum amount of tokens for the token bucket filter")
+        ("tbf-out-max-packets", po::value<int>()->composing(), "The packet queue length of the token bucket filter")
+        ("tbf-out-red-start", po::value<int>()->composing(), "The packet queue length at which random early drop kick in")
+        ("tbf-out-red-drop", po::value<float>()->composing(), "The packet drop probability used for random early drop")
         ("burst-dur", po::value<int>()->composing(), "The time in ms when packets are collected for bursts")
         ("burst-sleep", po::value<int>()->composing(), "The time in ms between bursts")
         ("nat-ext-port,e", po::value<std::vector<uint16_t> >()->multitoken(),"External port numbers for port forwarding")
@@ -59,11 +64,10 @@ int main (int argc, char* argv[])
     
     if (vm.count("nat-ext-ip")){
         extIp = vm["nat-ext-ip"].as<std::string>();
+    } else {
+        std::cerr << "nat-ext-ip is required" << std::endl << desc << std::endl;
+        exit(1);
     }
-    // else {
-    //     std::cerr << "ext-ip is required" << std::endl << desc << std::endl;
-    //     exit(1);
-    // }
     
     if (vm.count("nat-int-ip")){
         intIp = vm["nat-int-ip"].as<std::string>();
@@ -84,29 +88,54 @@ int main (int argc, char* argv[])
         rt->setLoss(los);
     }
 
-    if (vm.count("tbf-rate")){
-       int rate  = vm["tbf-rate"].as<int>();
-       rt->setTbfRateLimit(rate);
+    if (vm.count("tbf-in-rate")){
+       int rate  = vm["tbf-in-rate"].as<int>();
+       rt->setTbfInRateLimit(rate);
     }
 
-    if (vm.count("tbf-max-tokens")){
-        int tbfTokens = vm["tbf-max-tokens"].as<int>();
-        rt->setTbfMaxTokens(tbfTokens);
+    if (vm.count("tbf-in-max-tokens")){
+        int tbfTokens = vm["tbf-in-max-tokens"].as<int>();
+        rt->setTbfInMaxTokens(tbfTokens);
     }
 
-    if (vm.count("tbf-max-packets")){
-        int tbfPackets = vm["tbf-max-packets"].as<int>();
-        rt->setTbfMaxPackets(tbfPackets);
+    if (vm.count("tbf-in-max-packets")){
+        int tbfPackets = vm["tbf-in-max-packets"].as<int>();
+        rt->setTbfInMaxPackets(tbfPackets);
     }
 
-    if (vm.count("tbf-red-start")){
-        int tbfRedStart = vm["tbf-red-start"].as<int>();
-        rt->setTbfRedStart(tbfRedStart);
+    if (vm.count("tbf-in-red-start")){
+        int tbfRedStart = vm["tbf-in-red-start"].as<int>();
+        rt->setTbfInRedStart(tbfRedStart);
     }
 
-    if (vm.count("tbf-red-drop")){
-        float tbfRedDrop = vm["tbf-red-drop"].as<float>();
-        rt->setTbfRedDrop(tbfRedDrop);
+    if (vm.count("tbf-in-red-drop")){
+        float tbfRedDrop = vm["tbf-in-red-drop"].as<float>();
+        rt->setTbfInRedDrop(tbfRedDrop);
+    }
+
+    if (vm.count("tbf-out-rate")){
+       int rate  = vm["tbf-out-rate"].as<int>();
+       rt->setTbfOutRateLimit(rate);
+    }
+
+    if (vm.count("tbf-out-max-tokens")){
+        int tbfTokens = vm["tbf-out-max-tokens"].as<int>();
+        rt->setTbfOutMaxTokens(tbfTokens);
+    }
+
+    if (vm.count("tbf-out-max-packets")){
+        int tbfPackets = vm["tbf-out-max-packets"].as<int>();
+        rt->setTbfOutMaxPackets(tbfPackets);
+    }
+
+    if (vm.count("tbf-out-red-start")){
+        int tbfRedStart = vm["tbf-out-red-start"].as<int>();
+        rt->setTbfOutRedStart(tbfRedStart);
+    }
+
+    if (vm.count("tbf-out-red-drop")){
+        float tbfRedDrop = vm["tbf-out-red-drop"].as<float>();
+        rt->setTbfOutRedDrop(tbfRedDrop);
     }
 
     if (vm.count("burst-dur")){

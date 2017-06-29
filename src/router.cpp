@@ -105,6 +105,11 @@ Router::~Router() {
 int Router::newPacket(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, void *data)
 {
     PacketPtr pkt = std::make_shared<Packet>(nfa);
+    if(pkt->getDestinationIP() == extIp_){
+        pkt->setIngoing(true);
+    } else {
+        pkt->setIngoing(false);
+    }
 #ifdef TRACE_LOG
     pkt->dump();
 #endif

@@ -8,7 +8,7 @@ class Burst : public Filter, public std::enable_shared_from_this<Burst>
     Burst() {
         ioService_ = TpService::getInstance()->getIoService();
         burstDur_ = boost::posix_time::milliseconds(0);
-        sleepDur_ = boost::posix_time::milliseconds(0);
+        sleepDur_ = boost::posix_time::milliseconds(10);
         sleeping_ = false;
     }
     ~Burst() {}

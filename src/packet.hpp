@@ -56,6 +56,8 @@ class Packet
     // Timestamp is first set in the constructor, this can be retrieved and reset here
     void resetTimeStamp(){stamp_ = boost::posix_time::microsec_clock::local_time();}
     boost::posix_time::ptime getTimeStamp(){return stamp_;}
+    void setIngoing(bool i) {isIngoing_ = i;}
+    bool isIngoing() {return isIngoing_;}
 
  protected:
     boost::posix_time::ptime stamp_;
@@ -74,6 +76,8 @@ class Packet
 
     uint16_t ipFrag_;
     uint8_t ipHdrLen_;
+
+    bool isIngoing_;
 };
 
 #endif
