@@ -6,7 +6,7 @@
 class TokenBucket : public Filter, public std::enable_shared_from_this<TokenBucket>
 {
  public:
-    TokenBucket() : tokens_(0), maxTokens_(8000), maxPackets_(30), dataRate_(20480), redDrop_(0), timerStart_(getTimeStamp()), tokenInterval_(boost::posix_time::milliseconds(4)) {
+    TokenBucket() : tokens_(0), maxTokens_(8000), maxPackets_(30), dataRate_(20480), timerStart_(getTimeStamp()), tokenInterval_(boost::posix_time::milliseconds(4)) {
         srand (static_cast <unsigned> (time(0)));
         ioService_ = TpService::getInstance()->getIoService();
         redStart_ = maxPackets_;
@@ -44,7 +44,7 @@ class TokenBucket : public Filter, public std::enable_shared_from_this<TokenBuck
                 float r = (static_cast <float> (rand()) / static_cast <float> (RAND_MAX));
                 if(queue_.size() < redStart_){
                     queue_.push(pkt);
-                } else if (r > redDrop_) {
+                } else if (r > ((queue_.size()-redStart_)/(maxPackets_-redStart_))) {
                     queue_.push(pkt);
                 }
             }
@@ -61,7 +61,6 @@ class TokenBucket : public Filter, public std::enable_shared_from_this<TokenBuck
     void setMaxPackets(uint32_t p) {maxPackets_ = p;}
     void setDataRate(uint32_t rate) {dataRate_ = rate;}
     void setRedStart(uint32_t start) {redStart_ = start;}
-    void setRedDrop(float drop) {redDrop_ = drop;}
 
  private:
     std::mutex mutex_;
@@ -71,7 +70,6 @@ class TokenBucket : public Filter, public std::enable_shared_from_this<TokenBuck
     uint32_t maxPackets_;
     uint32_t dataRate_; // in kbit pr sec
     uint32_t redStart_;
-    float redDrop_;
 
     uint64_t timerStart_;
     boost::asio::io_service* ioService_;
@@ -122,12 +120,10 @@ class TokenBucketFilter : public Filter, public std::enable_shared_from_this<Tok
     void setInMaxPackets(uint32_t p) {inTb_->setMaxPackets(p);}
     void setInRateLimit(uint32_t rate) {inTb_->setDataRate(rate);}
     void setInRedStart(uint32_t start) {inTb_->setRedStart(start);}
-    void setInRedDrop(float drop) {inTb_->setRedDrop(drop);}
     void setOutMaxTokens(uint32_t t) {outTb_->setMaxTokens(t);}
     void setOutMaxPackets(uint32_t p) {outTb_->setMaxPackets(p);}
     void setOutRateLimit(uint32_t rate) {outTb_->setDataRate(rate);}
     void setOutRedStart(uint32_t start) {outTb_->setRedStart(start);}
-    void setOutRedDrop(float drop) {outTb_->setRedDrop(drop);}
 
  private:
     std::shared_ptr<TokenBucket> inTb_;

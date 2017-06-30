@@ -48,12 +48,10 @@ class Router : public Filter, public std::enable_shared_from_this<Router>
     void setTbfInMaxTokens(uint32_t t) {if(tbf_){tbf_->setInMaxTokens(t);}}
     void setTbfInMaxPackets(uint32_t p) {if(tbf_){tbf_->setInMaxPackets(p);}}
     void setTbfInRedStart(uint32_t s) {if(tbf_){tbf_->setInRedStart(s);}}
-    void setTbfInRedDrop(float d) {if(tbf_){tbf_->setInRedDrop(d);}}
     void setTbfOutRateLimit(uint32_t rate) {if(tbf_){tbf_->setOutRateLimit(rate);}}
     void setTbfOutMaxTokens(uint32_t t) {if(tbf_){tbf_->setOutMaxTokens(t);}}
     void setTbfOutMaxPackets(uint32_t p) {if(tbf_){tbf_->setOutMaxPackets(p);}}
     void setTbfOutRedStart(uint32_t s) {if(tbf_){tbf_->setOutRedStart(s);}}
-    void setTbfOutRedDrop(float d) {if(tbf_){tbf_->setOutRedDrop(d);}}
     
     // Since router is the first filter, handlePacket is not used
     void handlePacket(PacketPtr pkt);

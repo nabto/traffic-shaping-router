@@ -28,12 +28,10 @@ int main (int argc, char* argv[])
         ("tbf-in-max-tokens", po::value<int>()->composing(), "The maximum amount of tokens for the token bucket filter")
         ("tbf-in-max-packets", po::value<int>()->composing(), "The packet queue length of the token bucket filter")
         ("tbf-in-red-start", po::value<int>()->composing(), "The packet queue length at which random early drop kick in")
-        ("tbf-in-red-drop", po::value<float>()->composing(), "The packet drop probability used for random early drop")
         ("tbf-out-rate", po::value<int>()->composing(), "The rate limit in kbit pr. sec. for the token bucket filter")
         ("tbf-out-max-tokens", po::value<int>()->composing(), "The maximum amount of tokens for the token bucket filter")
         ("tbf-out-max-packets", po::value<int>()->composing(), "The packet queue length of the token bucket filter")
         ("tbf-out-red-start", po::value<int>()->composing(), "The packet queue length at which random early drop kick in")
-        ("tbf-out-red-drop", po::value<float>()->composing(), "The packet drop probability used for random early drop")
         ("burst-dur", po::value<int>()->composing(), "The time in ms when packets are collected for bursts")
         ("burst-sleep", po::value<int>()->composing(), "The time in ms between bursts")
         ("nat-ext-port,e", po::value<std::vector<uint16_t> >()->multitoken(),"External port numbers for port forwarding")
@@ -108,11 +106,6 @@ int main (int argc, char* argv[])
         rt->setTbfInRedStart(tbfRedStart);
     }
 
-    if (vm.count("tbf-in-red-drop")){
-        float tbfRedDrop = vm["tbf-in-red-drop"].as<float>();
-        rt->setTbfInRedDrop(tbfRedDrop);
-    }
-
     if (vm.count("tbf-out-rate")){
        int rate  = vm["tbf-out-rate"].as<int>();
        rt->setTbfOutRateLimit(rate);
@@ -131,11 +124,6 @@ int main (int argc, char* argv[])
     if (vm.count("tbf-out-red-start")){
         int tbfRedStart = vm["tbf-out-red-start"].as<int>();
         rt->setTbfOutRedStart(tbfRedStart);
-    }
-
-    if (vm.count("tbf-out-red-drop")){
-        float tbfRedDrop = vm["tbf-out-red-drop"].as<float>();
-        rt->setTbfOutRedDrop(tbfRedDrop);
     }
 
     if (vm.count("burst-dur")){
