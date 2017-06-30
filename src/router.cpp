@@ -58,7 +58,6 @@ void Router::init(std::vector<std::string> filters) {
             burst_ = std::make_shared<Burst>();
             last->setNext(burst_);
             last = burst_;
-            burst_->run();
         } else if (it.compare("Loss") == 0){
 #ifdef TRACE_LOG
             std::cout << "adding Loss filter" << std::endl;
@@ -73,7 +72,6 @@ void Router::init(std::vector<std::string> filters) {
             delay_ = std::make_shared<StaticDelay>();
             last->setNext(delay_);
             last = delay_;
-            delay_->init();
         } else if (it.compare("Nat") == 0){
 #ifdef TRACE_LOG
             std::cout << "adding Nat filter" << std::endl;
@@ -88,13 +86,21 @@ void Router::init(std::vector<std::string> filters) {
             tbf_ = std::make_shared<TokenBucketFilter>();
             last->setNext(tbf_);
             last = tbf_;
-            tbf_->run();
         } else {
             std::cout << "unknown filter " << it << std::endl;
         }
     }
     output_ = std::make_shared<Output>();
     last->setNext(output_);
+    if(burst_) {
+        burst_->run();
+    }
+    if(delay_) {
+        delay_->init();
+    }
+    if(tbf_){
+        tbf_->run();
+    }
     output_->init();
     initialized_ = true;
 }
