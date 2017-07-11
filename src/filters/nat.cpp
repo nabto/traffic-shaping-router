@@ -46,9 +46,9 @@ void Nat::handlePacket(PacketPtr pkt) {
         std::shared_ptr<ConnectionEntry> ent;
         {
             std::lock_guard<std::mutex> lock(mutex_);
-            if(intConn_.find(tuple) != intConn_.end()){
+            if(comIntConn_.find(tuple) != comIntConn_.end()){
                 // Connection found performing SNAT
-                ent = intConn_[tuple].lock();
+                ent = comIntConn_[tuple].lock();
             }
         }
         if(ent) {
@@ -67,26 +67,16 @@ void Nat::handlePacket(PacketPtr pkt) {
         if(type_ == SYM_NAT){
 #ifdef TRACE_LOG
             std::cout << "Nat type was SYM_NAT, checking port " << extDport <<  " is not taken." << std::endl;
+            dumpConnMaps();
 #endif
             std::lock_guard<std::mutex> lock(mutex_);
-            std::map<uint16_t, bool> usedPorts;
-            bool portUsed = false;
-            for (auto it = extConn_.begin(); it != extConn_.end(); ++it) {
-                usedPorts[it->first.getDport()] = true;
-                if (extDport == it->first.getDport()) {
-                    portUsed = true;
+            SymNatIntTuple redTup(tuple);
+            if(symNatIntConn_.find(redTup) != symNatIntConn_.end()){
+                // Port number already used by host
+                while(symNatIntConn_.find(redTup) != symNatIntConn_.end()) {
+                    extDport = redTup.getSport()+1;
+                    redTup.setSport(extDport);
                 }
-            }
-            if(portUsed){
-#ifdef TRACE_LOG
-                std::cout << "port number was taken changing to ";
-#endif
-                while(usedPorts.find(extDport) != usedPorts.end()) {
-                    extDport++;
-                }
-#ifdef TRACE_LOG
-                std::cout << extDport << std::endl;
-#endif
             }
 #ifdef TRACE_LOG
             else {
@@ -113,27 +103,21 @@ void Nat::handlePacket(PacketPtr pkt) {
         std::shared_ptr<ConnectionEntry> ent;
         if(type_ == SYM_NAT || type_ == PORT_R_NAT) {
             std::lock_guard<std::mutex> lock(mutex_);
-            if(extConn_.find(tuple) != extConn_.end()){
+            if(comExtConn_.find(tuple) != comExtConn_.end()){
                 // connection found
-                ent = extConn_[tuple].lock();
+                ent = comExtConn_[tuple].lock();
             }
         } else if (type_ == ADDR_R_NAT) {
             std::lock_guard<std::mutex> lock(mutex_);
-            for (auto it = extConn_.begin(); it != extConn_.end(); ++it) {
-                if(it->first.isEqual(tuple.getSrcIP(), tuple.getDstIP(), 0, tuple.getDport(), tuple.getProto())){
-                    // connection found
-                    ent = extConn_[tuple].lock();
-                    break;
-                }
+            AddrrExtTuple redExtTup(tuple);
+            if(addrrExtConn_.find(redExtTup) != addrrExtConn_.end()){
+                ent = addrrExtConn_[redExtTup].lock();
             }
         } else if (type_ == FULL_CONE_NAT) {
             std::lock_guard<std::mutex> lock(mutex_);
-            for (auto it = extConn_.begin(); it != extConn_.end(); ++it) {
-                if(it->first.isEqual(0, tuple.getDstIP(), 0, tuple.getDport(), tuple.getProto())){
-                    // connection found
-                    ent = extConn_[tuple].lock();
-                    break;
-                }
+            FullconeExtTuple redExtTup(tuple);
+            if(fcExtConn_.find(redExtTup) != fcExtConn_.end()){
+                ent = fcExtConn_[redExtTup].lock();
             }
         } else {
 #ifdef TRACE_LOG
@@ -153,11 +137,11 @@ void Nat::handlePacket(PacketPtr pkt) {
 #endif
             return;
         }else if(dnatRules.count(pkt->getDestinationPort()) == 1){
-            auto intTuple = ConnectionTuple(dnatRules[pkt->getDestinationPort()].getDstIP(),
-                                            tuple.getSrcIP(),
-                                            dnatRules[pkt->getDestinationPort()].getDport(),
-                                            tuple.getSport(),
-                                            tuple.getProto());
+            ConnectionTuple intTuple(dnatRules[pkt->getDestinationPort()].getDstIP(),
+                                     tuple.getSrcIP(),
+                                     dnatRules[pkt->getDestinationPort()].getDport(),
+                                     tuple.getSport(),
+                                     tuple.getProto());
             makeNewConn(tuple, intTuple);
             pkt->setDestinationIP(intTuple.getSrcIP());
             pkt->setDestinationPort(intTuple.getSport());
@@ -211,6 +195,11 @@ void Nat::setNatType(std::string type) {
             std::cout << "Nat type was invalid not changing it. Nat type was: " << type_ << std::endl;
 #endif
     }
+    comIntConn_.clear();
+    comExtConn_.clear();
+    symNatIntConn_.clear();
+    addrrExtConn_.clear();
+    fcExtConn_.clear();
 }
 
 void Nat::makeNewConn(ConnectionTuple extTup, ConnectionTuple intTup){
@@ -221,14 +210,66 @@ void Nat::makeNewConn(ConnectionTuple extTup, ConnectionTuple intTup){
                                                       self->removeFromMaps(obj->getIntTup(), obj->getExtTup());
                                                       delete obj;
                                                   });
-    intConn_[intTup] = entry;
-    extConn_[extTup] = entry;
+    comIntConn_[intTup] = entry;
+    comExtConn_[extTup] = entry;
+    if(type_ == SYM_NAT){
+        SymNatIntTuple redTup(intTup);
+        symNatIntConn_[redTup] = entry;
+    } else if(type_ == PORT_R_NAT) {
+    } else if(type_ == ADDR_R_NAT) {
+        AddrrExtTuple redTup(extTup);
+        addrrExtConn_[redTup] = entry;
+    } else if(type_ == FULL_CONE_NAT) {
+        FullconeExtTuple redTup(extTup);
+        fcExtConn_[redTup] = entry;
+    } else {
+#ifdef TRACE_LOG
+        std::cout << "Nat type was invalid in makeNewConn. Nat type was: " << type_ << std::endl;
+#endif
+    }
     entry->start();
 }
 
 void Nat::removeFromMaps(ConnectionTuple intTup, ConnectionTuple extTup){
     std::lock_guard<std::mutex> lock(mutex_);
-    intConn_.erase(intTup);
-    extConn_.erase(extTup);
+    comIntConn_.erase(intTup);
+    comExtConn_.erase(extTup);
+    if(type_ == SYM_NAT){
+        SymNatIntTuple redTup(intTup);
+        symNatIntConn_.erase(redTup);
+    } else if(type_ == PORT_R_NAT) {
+    } else if(type_ == ADDR_R_NAT) {
+        AddrrExtTuple redTup(extTup);
+        addrrExtConn_.erase(redTup);
+    } else if(type_ == FULL_CONE_NAT) {
+        FullconeExtTuple redTup(extTup);
+        fcExtConn_.erase(redTup);
+    } else {
+#ifdef TRACE_LOG
+        std::cout << "Nat type was invalid in removeFromMaps. Nat type was: " << type_ << std::endl;
+#endif
+    }
 }
 
+void Nat::dumpConnMaps(){
+    std::cout << "dumpint complete internal connections" << std::endl;
+    for( auto it : comIntConn_) {
+        std::cout << "\t" << it.first << std::endl;
+    }
+    std::cout << "dumpint complete external connections" << std::endl;
+    for( auto it : comExtConn_) {
+        std::cout << "\t" << it.first << std::endl;
+    }
+    std::cout << "dumpint sym nat internal connections" << std::endl;
+    for( auto it : symNatIntConn_) {
+        std::cout << "\t" << it.first << std::endl;
+    }
+    std::cout << "dumpint addrr external connections" << std::endl;
+    for( auto it : addrrExtConn_) {
+        std::cout << "\t" << it.first << std::endl;
+    }
+    std::cout << "dumpint fullcone external connections" << std::endl;
+    for( auto it : fcExtConn_) {
+        std::cout << "\t" << it.first << std::endl;
+    }
+}
