@@ -40,6 +40,7 @@ class Router : public Filter, public std::enable_shared_from_this<Router>
     // Nat filter
     void setIPs(std::string ipExt, std::string ipInt) {extIp_ = inet_network(ipExt.c_str()); if(nat_){nat_->setIPs(ipExt, ipInt);}}
     void setDnatRule(std::string ip, uint16_t extPort, uint16_t intPort) {if(nat_){nat_->setDnatRule(ip, extPort, intPort);}}
+    void setNatType(std::string type) {if(nat_){nat_->setNatType(type);}};
     // Burst filter
     void setBurstDuration(int dur) {if(burst_){burst_->setBurstDuration(dur);}}
     void setSleepDuration(int dur) {if(burst_){burst_->setSleepDuration(dur);}}

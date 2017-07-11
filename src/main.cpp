@@ -9,6 +9,7 @@ int main (int argc, char* argv[])
 {
     std::string extIp;
     std::string intIp;
+    std::string natType;
     int del = 0;
     float los = 0;
     int burstDur = 0;
@@ -22,6 +23,7 @@ int main (int argc, char* argv[])
         ("help,h", "Print usage message")
         ("nat-ext-ip", po::value<std::string>()->composing(), "The ip of the external interface of the router (Required with Nat filter)")
         ("nat-int-ip", po::value<std::string>()->composing(), "The ip of the internal interface of the router (Required with Nat filter)")
+        ("nat-type", po::value<std::string>()->composing(), "The type of NAT to be applied, valid types: portr, addrr, fullcone, symnat")
         ("delay,d", po::value<int>()->composing(), "The network delay in ms to be imposed")
         ("loss,l", po::value<float>()->composing(), "The packet loss probability")
         ("tbf-in-rate", po::value<int>()->composing(), "The rate limit in kbit pr. sec. for the token bucket filter")
@@ -62,20 +64,18 @@ int main (int argc, char* argv[])
     
     if (vm.count("nat-ext-ip")){
         extIp = vm["nat-ext-ip"].as<std::string>();
-    } else {
-        std::cerr << "nat-ext-ip is required" << std::endl << desc << std::endl;
-        exit(1);
     }
     
     if (vm.count("nat-int-ip")){
         intIp = vm["nat-int-ip"].as<std::string>();
     }
-    // else {
-    //     std::cerr << "int-ip is required" << std::endl << desc << std::endl;
-    //     exit(1);
-    //}
+
     rt->setIPs(extIp,intIp);
     
+    if (vm.count("nat-type")){
+        natType = vm["nat-type"].as<std::string>();
+    }
+    rt->setNatType(natType);
     if (vm.count("delay")){
         del = vm["delay"].as<int>();
         rt->setDelay(del);

@@ -27,7 +27,16 @@ set(test_router_src
   test_main.cpp
   )
 
+set(unit_test_src
+  ${target_hdr}
+  ${target_src}
+  filter_tests.cpp
+  )
+
+enable_testing()
+
 include_directories("/usr/include/boost")
+#include_directories("/usr/include/boost/test")
 set(CFLAGS "-fPIC -Wall -Werror -g")
 add_definitions(-std=c++11)
 add_definitions(${CFLAGS})
@@ -37,6 +46,7 @@ if (CMAKE_BUILD_TYPE MATCHES "Debug")
   add_definitions(-DTRACE_LOG=1)
 endif ()
 
+add_executable(router_filter_test ${unit_test_src})
 # add_executable(test_router ${test_router_src})
 add_executable(router ${router_src})
 
@@ -49,6 +59,18 @@ target_link_libraries(router
   boost_program_options
   boost_date_time
   libnet.so)
+target_link_libraries(router_filter_test
+  netfilter_queue
+  nfnetlink
+  boost_system
+  boost_thread
+  boost_unit_test_framework
+  boost_date_time
+  libnet.so
+  )
+add_test(NAME router_filter_test 
+                 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/testBin 
+                 COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/testBin/router_filter_test )
 # target_link_libraries(test_router
 #   netfilter_queue
 #   nfnetlink

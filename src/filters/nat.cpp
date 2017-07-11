@@ -16,22 +16,19 @@
 
 #define CONNECTION_TIMEOUT 10 // seconds for now
 
+//#define TRACE_LOG
+
 std::ostream& operator<<(std::ostream& os, const ConnectionTuple& ct) {
     os << "srcIp: " << ct.srcIp_ << " dstIp: " << ct.dstIp_ << " sport: " << ct.sport_ << " dport: " << ct.dport_;
     return os;
 }
 
 Nat::Nat(){
+    type_ = PORT_R_NAT;
 }
 
 
 Nat::~Nat(){}
-
-void Nat::removeFromMaps(ConnectionTuple intTup, ConnectionTuple extTup){
-    std::lock_guard<std::mutex> lock(mutex_);
-    intConn_.erase(intTup);
-    extConn_.erase(extTup);
-}
 
 void Nat::handlePacket(PacketPtr pkt) {
 #ifdef TRACE_LOG
@@ -65,15 +62,42 @@ void Nat::handlePacket(PacketPtr pkt) {
 #endif
             return;
         }
-        // ============================
-        // IF PORT NUMBER SHOULD CHANGE
-        // THROUGH THE ROUTER IT SHOULD
-        // BE DONE HERE!!
-        // ============================
+        // Connection not found, making a new one
+        uint16_t extDport = tuple.getSport();
+        if(type_ == SYM_NAT){
+#ifdef TRACE_LOG
+            std::cout << "Nat type was SYM_NAT, checking port " << extDport <<  " is not taken." << std::endl;
+#endif
+            std::lock_guard<std::mutex> lock(mutex_);
+            std::map<uint16_t, bool> usedPorts;
+            bool portUsed = false;
+            for (auto it = extConn_.begin(); it != extConn_.end(); ++it) {
+                usedPorts[it->first.getDport()] = true;
+                if (extDport == it->first.getDport()) {
+                    portUsed = true;
+                }
+            }
+            if(portUsed){
+#ifdef TRACE_LOG
+                std::cout << "port number was taken changing to ";
+#endif
+                while(usedPorts.find(extDport) != usedPorts.end()) {
+                    extDport++;
+                }
+#ifdef TRACE_LOG
+                std::cout << extDport << std::endl;
+#endif
+            }
+#ifdef TRACE_LOG
+            else {
+                std::cout << "port " << extDport << " was not taken" << std::endl;
+            }
+#endif
+        }
         auto extTuple = ConnectionTuple(pkt->getDestinationIP(),
                                         ipExt_,
                                         tuple.getDport(),
-                                        tuple.getSport(),
+                                        extDport,
                                         pkt->getProtocol());
         makeNewConn(extTuple,tuple);
         pkt->setSourceIP(extTuple.getDstIP());
@@ -87,11 +111,34 @@ void Nat::handlePacket(PacketPtr pkt) {
     } else {
         // EXTERNAL PACKET
         std::shared_ptr<ConnectionEntry> ent;
-        {
+        if(type_ == SYM_NAT || type_ == PORT_R_NAT) {
             std::lock_guard<std::mutex> lock(mutex_);
             if(extConn_.find(tuple) != extConn_.end()){
+                // connection found
                 ent = extConn_[tuple].lock();
             }
+        } else if (type_ == ADDR_R_NAT) {
+            std::lock_guard<std::mutex> lock(mutex_);
+            for (auto it = extConn_.begin(); it != extConn_.end(); ++it) {
+                if(it->first.isEqual(tuple.getSrcIP(), tuple.getDstIP(), 0, tuple.getDport(), tuple.getProto())){
+                    // connection found
+                    ent = extConn_[tuple].lock();
+                    break;
+                }
+            }
+        } else if (type_ == FULL_CONE_NAT) {
+            std::lock_guard<std::mutex> lock(mutex_);
+            for (auto it = extConn_.begin(); it != extConn_.end(); ++it) {
+                if(it->first.isEqual(0, tuple.getDstIP(), 0, tuple.getDport(), tuple.getProto())){
+                    // connection found
+                    ent = extConn_[tuple].lock();
+                    break;
+                }
+            }
+        } else {
+#ifdef TRACE_LOG
+            std::cout << "Nat type was invalid dropping packet. Nat type was: " << type_ << std::endl;
+#endif
         }
         if(ent) {
             // Connection found
@@ -150,6 +197,22 @@ void Nat::setIPs(std::string ipExt, std::string ipInt) {
     ipInt_ = inet_network(ipInt.c_str());
 }
 
+void Nat::setNatType(std::string type) {
+    if (type.compare("portr") == 0){
+        type_ = PORT_R_NAT;
+    } else if(type.compare("addrr") == 0){
+        type_= ADDR_R_NAT;
+    } else if(type.compare("symnat") == 0){
+        type_= SYM_NAT;
+    } else if(type.compare("fullcone") == 0){
+        type_= FULL_CONE_NAT;
+    } else {
+#ifdef TRACE_LOG
+            std::cout << "Nat type was invalid not changing it. Nat type was: " << type_ << std::endl;
+#endif
+    }
+}
+
 void Nat::makeNewConn(ConnectionTuple extTup, ConnectionTuple intTup){
     auto self = shared_from_this();
 
@@ -161,5 +224,11 @@ void Nat::makeNewConn(ConnectionTuple extTup, ConnectionTuple intTup){
     intConn_[intTup] = entry;
     extConn_[extTup] = entry;
     entry->start();
+}
+
+void Nat::removeFromMaps(ConnectionTuple intTup, ConnectionTuple extTup){
+    std::lock_guard<std::mutex> lock(mutex_);
+    intConn_.erase(intTup);
+    extConn_.erase(extTup);
 }
 

@@ -7,6 +7,7 @@
 #include "connection_tuple.hpp"
 #include <mutex>
 
+enum nat_type { PORT_R_NAT, ADDR_R_NAT, SYM_NAT, FULL_CONE_NAT};
 
 // Nat Filter implementing port restricted nat for a single internal IP.
 class Nat : public Filter, public std::enable_shared_from_this<Nat>
@@ -21,7 +22,7 @@ class Nat : public Filter, public std::enable_shared_from_this<Nat>
     void setIPs(std::string ipExt, std::string ipInt);
     void setDnatRule(std::string ip, uint16_t extPort, uint16_t intPort);
     void removeDnatRule(uint16_t extPort);
-
+    void setNatType(std::string type);
  private:
     uint32_t ipExt_;
     uint32_t ipInt_;
@@ -29,6 +30,7 @@ class Nat : public Filter, public std::enable_shared_from_this<Nat>
     std::map<ConnectionTuple, ConnectionEntryWeakPtr> intConn_;
     std::map<ConnectionTuple, ConnectionEntryWeakPtr> extConn_;
     std::map<uint16_t, ConnectionTuple> dnatRules;
+    nat_type type_;
 
     void makeNewConn(ConnectionTuple extTup, ConnectionTuple intTup);
     void removeFromMaps(ConnectionTuple intTup, ConnectionTuple extTup);
