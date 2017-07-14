@@ -27,6 +27,7 @@ class Packet
     Packet(struct nfq_data *nfa);
     // Construct dummy packet for testing purposes
     Packet();
+    Packet(uint32_t srcIp, uint32_t dstIp, uint16_t sport, uint16_t dport);
     ~Packet();
 		
     // set functions for changing IPs, Ports, and interfaces

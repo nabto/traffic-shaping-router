@@ -16,7 +16,7 @@ typedef std::weak_ptr<ConnectionEntry> ConnectionEntryWeakPtr;
 class ConnectionEntry : public std::enable_shared_from_this<ConnectionEntry>
 {
  public:
-    ConnectionEntry(int timeout, ConnectionTuple extTup, ConnectionTuple intTup): timer_(*(TpService::getInstance()->getIoService())), timeout_(timeout), extTuple_(extTup), intTuple_(intTup) {}
+    ConnectionEntry(int timeout, ConnectionTuple extTup, ConnectionTuple intTup): tpService_(TpService::getInstance()), timer_(*(TpService::getInstance()->getIoService())), timeout_(timeout), extTuple_(extTup), intTuple_(intTup) {}
     void start(){ armTimer();}
     void rearm(){ stop(); armTimer();}
     void stop(){
@@ -27,6 +27,7 @@ class ConnectionEntry : public std::enable_shared_from_this<ConnectionEntry>
     ConnectionTuple getIntTup(){return intTuple_;}
 
  private:
+    std::shared_ptr<TpService> tpService_;
     boost::asio::steady_timer timer_;
     int timeout_;
     std::mutex mutex_;

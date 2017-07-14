@@ -87,6 +87,19 @@ Packet::Packet() : stamp_(boost::posix_time::microsec_clock::local_time()) {
     strOutboundInterface_ = "eth9";
 }
 
+Packet::Packet(uint32_t srcIp, uint32_t dstIp, uint16_t sport, uint16_t dport) : stamp_(boost::posix_time::microsec_clock::local_time()) {
+    ipFrag_ = 5;
+    transProt_ = PROTO_TCP;
+    srcIp_ = srcIp;
+    dstIp_ = dstIp;
+    sport_ = sport;
+    dport_ = dport;
+    ipHdrLen_ = 20;
+    nfqID_ = 5;
+    strInboundInterface_ = "eth8";
+    strOutboundInterface_ = "eth9";
+}
+
 Packet::~Packet() {
 }
 

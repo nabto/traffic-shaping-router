@@ -45,6 +45,38 @@ class TestFilter : public Filter, public std::enable_shared_from_this<TestFilter
 
 BOOST_AUTO_TEST_CASE(TestNatFilterSymNat)
 {
+    /*************************************
+     * test packets for sym nat
+     * packet 1:
+     * iaddr -> raddr1 | eaddr -> raddr1
+     * iport -> rport1 | iport -> rport1
+     * 
+     * packet 2:
+     * raddr1 -> eaddr  | raddr1 -> iaddr
+     * rport1 -> iport  | rport1 -> iport
+     * 
+     * packet 3:
+     * raddr2 -> eaddr  |    \/
+     * rport1 -> iport  |    /\
+     * 
+     * packet 4:
+     * raddr1 -> eaddr  |    \/
+     * rport2 -> iport  |    /\
+     * 
+     * packet 5:
+     * raddr2 -> eaddr  |    \/
+     * rport2 -> iport  |    /\
+     * 
+     * packet 6:
+     * iaddr  -> raddr1 | eaddr  -> raddr1
+     * iport  -> rport2 | eport2 -> rport2
+     * 
+     *************************************/
+    uint32_t intIp_ = inet_network(intIp.c_str());
+    uint32_t extIp_ = inet_network(extIp.c_str());
+    uint32_t remIp1_ = inet_network(remIp1.c_str());
+    uint32_t remIp2_ = inet_network(remIp2.c_str());
+
     std::shared_ptr<TestFilter> tst;
     std::shared_ptr<Nat> nat;
     nat = std::make_shared<Nat>();
@@ -53,52 +85,344 @@ BOOST_AUTO_TEST_CASE(TestNatFilterSymNat)
     nat->setIPs(extIp, intIp);
     nat->setNatType("symnat");
 
-    // SENDING INITIAL PACKET TO OPEN A PORT IN NAT
-    PacketPtr pkt = std::make_shared<Packet>();
-    pkt->setSourceIP(inet_network(intIp.c_str()));
-    pkt->setDestinationIP(inet_network(remIp1.c_str()));
-    pkt->setSourcePort(intPort);
-    pkt->setDestinationPort(remPort1);
-
+    // Packet 1
+    PacketPtr pkt = std::make_shared<Packet>(intIp_, remIp1_, intPort, remPort1);
     nat->handlePacket(pkt);
-    // internal packet should always be forwarded with the external IP, intPort should not change in first connection
     BOOST_REQUIRE(tst->handledPacket());
-    BOOST_REQUIRE(tst->getHandledPacket()->getSourceIP() == inet_network(extIp.c_str()));
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourceIP() == extIp_);
     BOOST_REQUIRE(tst->getHandledPacket()->getSourcePort() == intPort);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationIP() == remIp1_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationPort() == remPort1);
 
-    // Sending packet back to check port is open
-    PacketPtr pkt2 = std::make_shared<Packet>();
-    pkt2->setSourceIP(inet_network(remIp1.c_str()));
-    pkt2->setDestinationIP(tst->getHandledPacket()->getSourceIP());
-    pkt2->setSourcePort(remPort1);
-    pkt2->setDestinationPort(tst->getHandledPacket()->getSourcePort());
-
+    // Packet 2
+    pkt.reset(new Packet(remIp1_,extIp_,remPort1,intPort));
     tst->reset();
-    nat->handlePacket(pkt2);
-
-    // Internal host should see original IPs and Port numbers
+    nat->handlePacket(pkt);
     BOOST_REQUIRE(tst->handledPacket());
-    BOOST_REQUIRE(tst->getHandledPacket()->getSourceIP() == inet_network(remIp1.c_str()));
-    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationIP() == inet_network(intIp.c_str()));
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourceIP() == remIp1_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationIP() == intIp_);
     BOOST_REQUIRE(tst->getHandledPacket()->getSourcePort() == remPort1);
     BOOST_REQUIRE(tst->getHandledPacket()->getDestinationPort() == intPort);
 
+    // Packet 3
+    pkt.reset(new Packet(remIp2_,extIp_,remPort1,intPort));
     tst->reset();
-
-    // Sending packet from internal host on the same port with different destination
-    pkt->setSourceIP(inet_network(intIp.c_str()));
-    pkt->setDestinationIP(inet_network(remIp1.c_str()));
-    pkt->setSourcePort(intPort);
-    pkt->setDestinationPort(remPort2);
-
     nat->handlePacket(pkt);
-    
-    // internal packet should always be forwarded with the external IP.
-    // Second time the intPort is used, the port number should change through the NAT
-    BOOST_REQUIRE(tst->handledPacket());
-    BOOST_REQUIRE(tst->getHandledPacket()->getSourceIP() == inet_network(extIp.c_str()));
-    BOOST_REQUIRE(tst->getHandledPacket()->getSourcePort() != intPort);
+    BOOST_REQUIRE(!tst->handledPacket());
 
+    // Packet 4
+    pkt.reset(new Packet(remIp1_,extIp_,remPort2,intPort));
+    tst->reset();
+    nat->handlePacket(pkt);
+    BOOST_REQUIRE(!tst->handledPacket());
+
+    // Packet 5
+    pkt.reset(new Packet(remIp2_,extIp_,remPort2,intPort));
+    tst->reset();
+    nat->handlePacket(pkt);
+    BOOST_REQUIRE(!tst->handledPacket());
+
+    // Packet 6
+    pkt.reset(new Packet(intIp_, remIp1_, intPort, remPort2));
+    nat->handlePacket(pkt);
+    BOOST_REQUIRE(tst->handledPacket());
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourceIP() == extIp_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourcePort() != intPort);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationIP() == remIp1_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationPort() == remPort2);
+
+    tst->reset();
+    
+}
+
+BOOST_AUTO_TEST_CASE(TestNatFilterFullconeNat)
+{
+    /*************************************
+     * test packets for fullcone nat
+     * packet 1:
+     * iaddr -> raddr1 | eaddr -> raddr1
+     * iport -> rport1 | iport -> rport1
+     * 
+     * packet 2:
+     * raddr1 -> eaddr  | raddr1 -> iaddr
+     * rport1 -> iport  | rport1 -> iport
+     * 
+     * packet 3:
+     * raddr2 -> eaddr  | raddr2 -> iaddr
+     * rport1 -> iport  | rport1 -> iport
+     * 
+     * packet 4:
+     * raddr1 -> eaddr  | raddr1 -> iaddr
+     * rport2 -> iport  | rport2 -> iport
+     * 
+     * packet 5:
+     * raddr2 -> eaddr  | raddr2 -> iaddr
+     * rport2 -> iport  | rport2 -> iport
+     * 
+     * packet 6:
+     * iaddr  -> raddr2 | eaddr  -> raddr2
+     * iport  -> rport2 | iport  -> rport2
+     * 
+     *************************************/
+    uint32_t intIp_ = inet_network(intIp.c_str());
+    uint32_t extIp_ = inet_network(extIp.c_str());
+    uint32_t remIp1_ = inet_network(remIp1.c_str());
+    uint32_t remIp2_ = inet_network(remIp2.c_str());
+
+    std::shared_ptr<TestFilter> tst;
+    std::shared_ptr<Nat> nat;
+    nat = std::make_shared<Nat>();
+    tst = std::make_shared<TestFilter>();
+    nat->setNext(tst);
+    nat->setIPs(extIp, intIp);
+    nat->setNatType("fullcone");
+
+    // Packet 1
+    PacketPtr pkt = std::make_shared<Packet>(intIp_, remIp1_, intPort, remPort1);
+    nat->handlePacket(pkt);
+    BOOST_REQUIRE(tst->handledPacket());
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourceIP() == extIp_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourcePort() == intPort);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationIP() == remIp1_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationPort() == remPort1);
+
+    // Packet 2
+    pkt.reset(new Packet(remIp1_,extIp_,remPort1,intPort));
+    tst->reset();
+    nat->handlePacket(pkt);
+    BOOST_REQUIRE(tst->handledPacket());
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourceIP() == remIp1_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationIP() == intIp_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourcePort() == remPort1);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationPort() == intPort);
+
+    // Packet 3
+    pkt.reset(new Packet(remIp2_,extIp_,remPort1,intPort));
+    tst->reset();
+    nat->handlePacket(pkt);
+    BOOST_REQUIRE(tst->handledPacket());
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourceIP() == remIp2_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationIP() == intIp_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourcePort() == remPort1);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationPort() == intPort);
+
+    // Packet 4
+    pkt.reset(new Packet(remIp1_,extIp_,remPort2,intPort));
+    tst->reset();
+    nat->handlePacket(pkt);
+    BOOST_REQUIRE(tst->handledPacket());
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourceIP() == remIp1_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationIP() == intIp_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourcePort() == remPort2);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationPort() == intPort);
+
+    // Packet 5
+    pkt.reset(new Packet(remIp2_,extIp_,remPort2,intPort));
+    tst->reset();
+    nat->handlePacket(pkt);
+    BOOST_REQUIRE(tst->handledPacket());
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourceIP() == remIp2_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationIP() == intIp_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourcePort() == remPort2);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationPort() == intPort);
+
+    // Packet 6
+    pkt.reset(new Packet(intIp_, remIp2_, intPort, remPort2));
+    nat->handlePacket(pkt);
+    BOOST_REQUIRE(tst->handledPacket());
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourceIP() == extIp_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationIP() == remIp2_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourcePort() == intPort);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationPort() == remPort2);
+
+    tst->reset();
+}
+
+BOOST_AUTO_TEST_CASE(TestNatFilterPortrNat)
+{
+    /*************************************
+     * test packets for Port restricted nat
+     * packet 1:
+     * iaddr -> raddr1 | eaddr -> raddr1
+     * iport -> rport1 | iport -> rport1
+     * 
+     * packet 2:
+     * raddr1 -> eaddr  | raddr1 -> iaddr
+     * rport1 -> iport  | rport1 -> iport
+     * 
+     * packet 3:
+     * raddr2 -> eaddr  |    \/
+     * rport1 -> iport  |    /\
+     * 
+     * packet 4:
+     * raddr1 -> eaddr  |    \/
+     * rport2 -> iport  |    /\
+     * 
+     * packet 5:
+     * raddr2 -> eaddr  |    \/
+     * rport2 -> iport  |    /\
+     * 
+     * packet 6:
+     * iaddr  -> raddr1 | eaddr  -> raddr1
+     * iport  -> rport2 | iport -> rport2
+     * 
+     *************************************/
+    uint32_t intIp_ = inet_network(intIp.c_str());
+    uint32_t extIp_ = inet_network(extIp.c_str());
+    uint32_t remIp1_ = inet_network(remIp1.c_str());
+    uint32_t remIp2_ = inet_network(remIp2.c_str());
+
+    std::shared_ptr<TestFilter> tst;
+    std::shared_ptr<Nat> nat;
+    nat = std::make_shared<Nat>();
+    tst = std::make_shared<TestFilter>();
+    nat->setNext(tst);
+    nat->setIPs(extIp, intIp);
+    nat->setNatType("portr");
+
+    // Packet 1
+    PacketPtr pkt = std::make_shared<Packet>(intIp_, remIp1_, intPort, remPort1);
+    nat->handlePacket(pkt);
+    BOOST_REQUIRE(tst->handledPacket());
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourceIP() == extIp_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourcePort() == intPort);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationIP() == remIp1_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationPort() == remPort1);
+
+    // Packet 2
+    pkt.reset(new Packet(remIp1_,extIp_,remPort1,intPort));
+    tst->reset();
+    nat->handlePacket(pkt);
+    BOOST_REQUIRE(tst->handledPacket());
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourceIP() == remIp1_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationIP() == intIp_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourcePort() == remPort1);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationPort() == intPort);
+
+    // Packet 3
+    pkt.reset(new Packet(remIp2_,extIp_,remPort1,intPort));
+    tst->reset();
+    nat->handlePacket(pkt);
+    BOOST_REQUIRE(!tst->handledPacket());
+
+    // Packet 4
+    pkt.reset(new Packet(remIp1_,extIp_,remPort2,intPort));
+    tst->reset();
+    nat->handlePacket(pkt);
+    BOOST_REQUIRE(!tst->handledPacket());
+
+    // Packet 5
+    pkt.reset(new Packet(remIp2_,extIp_,remPort2,intPort));
+    tst->reset();
+    nat->handlePacket(pkt);
+    BOOST_REQUIRE(!tst->handledPacket());
+
+    // Packet 6
+    pkt.reset(new Packet(intIp_, remIp1_, intPort, remPort2));
+    nat->handlePacket(pkt);
+    BOOST_REQUIRE(tst->handledPacket());
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourceIP() == extIp_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourcePort() == intPort);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationIP() == remIp1_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationPort() == remPort2);
+
+    tst->reset();
+    
+}
+
+BOOST_AUTO_TEST_CASE(TestNatFilterAddrNat)
+{
+    /*************************************
+     * test packets for address restricted nat
+     * packet 1:
+     * iaddr -> raddr1 | eaddr -> raddr1
+     * iport -> rport1 | iport -> rport1
+     * 
+     * packet 2:
+     * raddr1 -> eaddr  | raddr1 -> iaddr
+     * rport1 -> iport  | rport1 -> iport
+     * 
+     * packet 3:
+     * raddr2 -> eaddr  |     \/
+     * rport1 -> iport  |     /\
+     * 
+     * packet 4:
+     * raddr1 -> eaddr  | raddr1 -> iaddr
+     * rport2 -> iport  | rport2 -> iport
+     * 
+     * packet 5:
+     * raddr2 -> eaddr  |     \/
+     * rport2 -> iport  |     /\
+     * 
+     * packet 6:
+     * iaddr  -> raddr2 | eaddr  -> raddr2
+     * iport  -> rport2 | iport  -> rport2
+     * 
+     *************************************/
+    uint32_t intIp_ = inet_network(intIp.c_str());
+    uint32_t extIp_ = inet_network(extIp.c_str());
+    uint32_t remIp1_ = inet_network(remIp1.c_str());
+    uint32_t remIp2_ = inet_network(remIp2.c_str());
+
+    std::shared_ptr<TestFilter> tst;
+    std::shared_ptr<Nat> nat;
+    nat = std::make_shared<Nat>();
+    tst = std::make_shared<TestFilter>();
+    nat->setNext(tst);
+    nat->setIPs(extIp, intIp);
+    nat->setNatType("addrr");
+
+    // Packet 1
+    PacketPtr pkt = std::make_shared<Packet>(intIp_, remIp1_, intPort, remPort1);
+    nat->handlePacket(pkt);
+    BOOST_REQUIRE(tst->handledPacket());
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourceIP() == extIp_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourcePort() == intPort);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationIP() == remIp1_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationPort() == remPort1);
+
+    // Packet 2
+    pkt.reset(new Packet(remIp1_,extIp_,remPort1,intPort));
+    tst->reset();
+    nat->handlePacket(pkt);
+    BOOST_REQUIRE(tst->handledPacket());
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourceIP() == remIp1_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationIP() == intIp_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourcePort() == remPort1);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationPort() == intPort);
+
+    // Packet 3
+    pkt.reset(new Packet(remIp2_,extIp_,remPort1,intPort));
+    tst->reset();
+    nat->handlePacket(pkt);
+    BOOST_REQUIRE(!tst->handledPacket());
+
+    // Packet 4
+    pkt.reset(new Packet(remIp1_,extIp_,remPort2,intPort));
+    tst->reset();
+    nat->handlePacket(pkt);
+    BOOST_REQUIRE(tst->handledPacket());
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourceIP() == remIp1_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationIP() == intIp_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourcePort() == remPort2);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationPort() == intPort);
+
+    // Packet 5
+    pkt.reset(new Packet(remIp2_,extIp_,remPort2,intPort));
+    tst->reset();
+    nat->handlePacket(pkt);
+    BOOST_REQUIRE(!tst->handledPacket());
+
+    // Packet 6
+    pkt.reset(new Packet(intIp_, remIp2_, intPort, remPort2));
+    nat->handlePacket(pkt);
+    BOOST_REQUIRE(tst->handledPacket());
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourceIP() == extIp_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationIP() == remIp2_);
+    BOOST_REQUIRE(tst->getHandledPacket()->getSourcePort() == intPort);
+    BOOST_REQUIRE(tst->getHandledPacket()->getDestinationPort() == remPort2);
+
+    tst->reset();
 }
 
 //BOOST_AUTO_TEST_SUITE_END()
