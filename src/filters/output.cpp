@@ -12,8 +12,9 @@ Output::~Output() {
     libnet_destroy(l_);
 }
     
-void Output::init() {
+bool Output::init() {
     queue_.asyncPop(std::bind(&Output::popHandler, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+    return true;
 }
 
 void Output::handlePacket(PacketPtr pkt) {

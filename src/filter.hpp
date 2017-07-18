@@ -9,6 +9,7 @@ class Filter{
  public:
     virtual void setNext(std::shared_ptr<Filter> next){next_ = next;}
     virtual void handlePacket(PacketPtr pkt) = 0;
+    virtual bool init(){return true;}
  protected:
     std::shared_ptr<Filter> next_;
 };

@@ -101,11 +101,12 @@ class TokenBucketFilter : public Filter, public std::enable_shared_from_this<Tok
     }
     ~TokenBucketFilter() {}
 
-    void run() {
+    bool init() {
         inTb_->setNext(next_);
         outTb_->setNext(next_);
         inTb_->run();
         outTb_->run();
+        return true;
     }
     
     void handlePacket(PacketPtr pkt) {

@@ -24,6 +24,7 @@ int main (int argc, char* argv[])
         ("nat-ext-ip", po::value<std::string>()->composing(), "The ip of the external interface of the router (Required with Nat filter)")
         ("nat-int-ip", po::value<std::string>()->composing(), "The ip of the internal interface of the router (Required with Nat filter)")
         ("nat-type", po::value<std::string>()->composing(), "The type of NAT to be applied, valid types: portr, addrr, fullcone, symnat")
+        ("nat-timeout", po::value<uint32_t>()->composing(), "The timeout of NAT connections in seconds, 10min default")
         ("delay,d", po::value<int>()->composing(), "The network delay in ms to be imposed")
         ("loss,l", po::value<float>()->composing(), "The packet loss probability")
         ("tbf-in-rate", po::value<int>()->composing(), "The rate limit in kbit pr. sec. for the token bucket filter")
@@ -64,18 +65,27 @@ int main (int argc, char* argv[])
     
     if (vm.count("nat-ext-ip")){
         extIp = vm["nat-ext-ip"].as<std::string>();
+    } else {
+        std::cout << "WARNING: nat-ext-ip was not set, this only works if the Nat filter is unused!" << std::endl;
     }
     
     if (vm.count("nat-int-ip")){
         intIp = vm["nat-int-ip"].as<std::string>();
+    } else {
+        std::cout << "WARNING: nat-int-ip was not set, this only works if the Nat filter is unused!" << std::endl;
     }
 
     rt->setIPs(extIp,intIp);
     
     if (vm.count("nat-type")){
         natType = vm["nat-type"].as<std::string>();
+        rt->setNatType(natType);
     }
-    rt->setNatType(natType);
+    if (vm.count("nat-timeout")){
+        uint32_t natTimeout = vm["nat-timeout"].as<uint32_t>();
+        rt->setNatTimeout(natTimeout);
+    }
+
     if (vm.count("delay")){
         del = vm["delay"].as<int>();
         rt->setDelay(del);

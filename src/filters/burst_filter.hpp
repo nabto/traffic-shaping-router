@@ -12,7 +12,7 @@ class Burst : public Filter, public std::enable_shared_from_this<Burst>
         sleeping_ = false;
     }
     ~Burst() {}
-    void run(){
+    bool init(){
         std::shared_ptr<boost::asio::deadline_timer> t;
         if(sleeping_) {
             t = std::make_shared<boost::asio::deadline_timer>(*ioService_, burstDur_);
@@ -28,10 +28,10 @@ class Burst : public Filter, public std::enable_shared_from_this<Burst>
         }
         auto self = shared_from_this();
         std::function< void (void)> f = [self, t] (void) {
-            self->run();
+            self->init();
         };
         t->async_wait(boost::bind(f));
-        
+        return true;
     }
     void handlePacket(PacketPtr pkt){
         if(sleeping_){

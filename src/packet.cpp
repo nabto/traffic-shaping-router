@@ -68,6 +68,8 @@ Packet::Packet(struct nfq_data *nfa) : stamp_(boost::posix_time::microsec_clock:
     } else if (transProt_ == PROTO_ICMP){
         icmphdr* icmp = (icmphdr*)((packetData_.data()+ipHdrLen_));
         icmpId_ = icmp->un.echo.id;
+        sport_ = icmpId_;
+        dport_ = icmpId_;
     }
 #ifdef TRACE_LOG
     std::cout << "Dumping packet after construction: " << std::endl;

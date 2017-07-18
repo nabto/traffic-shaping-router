@@ -26,7 +26,7 @@ Router::Router() {
     initialized_ = false;
 }
 
-void Router::init() {
+bool Router::init() {
     std::cout << "using all filters" << std::endl;
     loss_ = std::make_shared<Loss>();
     nat_ = std::make_shared<Nat>();
@@ -41,14 +41,11 @@ void Router::init() {
     delay_->setNext(tbf_);
     tbf_->setNext(output_);
     
-    output_->init();
-    delay_->init();
-    burst_->run();
-    tbf_->run();
     initialized_ = true;
+    return true;
 }
 
-void Router::init(std::vector<std::string> filters) {
+bool Router::init(std::vector<std::string> filters) {
     std::shared_ptr<Filter> last = shared_from_this();
     for (auto it : filters){
         if (it.compare("Burst") == 0){
@@ -92,17 +89,8 @@ void Router::init(std::vector<std::string> filters) {
     }
     output_ = std::make_shared<Output>();
     last->setNext(output_);
-    if(burst_) {
-        burst_->run();
-    }
-    if(delay_) {
-        delay_->init();
-    }
-    if(tbf_){
-        tbf_->run();
-    }
-    output_->init();
     initialized_ = true;
+    return true;
 }
 
 Router::~Router() {
@@ -174,6 +162,42 @@ bool Router::execute() {
     nh = nfq_nfnlh(h);
     fd = nfnl_fd(nh);
 
+    if(delay_) {
+        if(!delay_->init()){
+            std::cout << "initialization of delay filter failed" << std::endl;
+            return false;
+        }
+    }
+    if(loss_) {
+        if(!loss_->init()){
+            std::cout << "initialization of loss filter failed" << std::endl;
+            return false;
+        }
+    }
+    if(nat_) {
+        if(!nat_->init()){
+            std::cout << "initialization of nat filter failed" << std::endl;
+            return false;
+        }
+    }
+    if(burst_) {
+        if(!burst_->init()){
+            std::cout << "initialization of burst filter failed" << std::endl;
+            return false;
+        }
+    }
+    if(tbf_) {
+        if(!tbf_->init()){
+            std::cout << "initialization of tbf filter failed" << std::endl;
+            return false;
+        }
+    }
+    if(output_) {
+        if(!output_->init()){
+            std::cout << "initialization of output filter failed" << std::endl;
+            return false;
+        }
+    }
     std::cout << "Router starting Execute loop" << std::endl;
     while ((rv = recv(fd, buf, RECV_BUF_SIZE, 0))) {
         if (rv >= 0){

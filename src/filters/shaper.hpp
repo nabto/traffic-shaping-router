@@ -21,7 +21,7 @@ class StaticDelay : public Filter, public std::enable_shared_from_this<StaticDel
  public:
     StaticDelay();
     ~StaticDelay();
-    void init();
+    bool init();
     // Packet handler putting packets into async queue and returning
     void handlePacket(PacketPtr pkt);
     // PopHandler pops packets from the async queue and delays them

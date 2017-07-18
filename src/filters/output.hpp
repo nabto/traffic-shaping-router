@@ -13,7 +13,7 @@ class Output : public Filter, public std::enable_shared_from_this<Output>
  public:
     Output();
     ~Output();
-    void init();
+    bool init();
     // handlePacket pushes pkt to an AsyncQueue and returns
     void handlePacket(PacketPtr pkt);
     // Pophandler handles packets as they are poped from the queue

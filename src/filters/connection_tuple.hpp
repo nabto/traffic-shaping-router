@@ -60,63 +60,42 @@ class ConnectionTuple{
 };
 
 
-class SymNatIntTuple : public ConnectionTuple
+class SymNatTuple : public ConnectionTuple
 {
  public:
-    SymNatIntTuple(PacketPtr pkt)
+    SymNatTuple(PacketPtr pkt)
         : ConnectionTuple(pkt) { }
-    SymNatIntTuple(uint32_t srcIp, uint32_t dstIp, uint16_t srcPort, uint16_t dstPort, uint8_t proto)
+    SymNatTuple(uint32_t srcIp, uint32_t dstIp, uint16_t srcPort, uint16_t dstPort, uint8_t proto)
         : ConnectionTuple(srcIp, dstIp, srcPort, dstPort, proto) { }
-    SymNatIntTuple(ConnectionTuple bt)
+    SymNatTuple(ConnectionTuple bt)
         : ConnectionTuple(bt.getSrcIP(), bt.getDstIP(), bt.getSport(), bt.getDport(), bt.getProto()) { }
 
-    bool operator==(const SymNatIntTuple& ct) const {
+    bool operator==(const SymNatTuple& ct) const {
         return (std::tie(srcIp_, sport_, proto_) == std::tie(ct.srcIp_, ct.sport_, ct.proto_));
     }
-    bool operator<(const SymNatIntTuple& ct) const {
+    bool operator<(const SymNatTuple& ct) const {
         return (std::tie(srcIp_, sport_, proto_) < std::tie(ct.srcIp_, ct.sport_, ct.proto_));
     }
 };
 
 
-class FullconeExtTuple : public ConnectionTuple
+class AddrrTuple : public ConnectionTuple
 {
  public:
-    FullconeExtTuple(PacketPtr pkt)
+    AddrrTuple(PacketPtr pkt)
         : ConnectionTuple(pkt)
         { }
-    FullconeExtTuple(uint32_t srcIp, uint32_t dstIp, uint16_t srcPort, uint16_t dstPort, uint8_t proto)
+    AddrrTuple(uint32_t srcIp, uint32_t dstIp, uint16_t srcPort, uint16_t dstPort, uint8_t proto)
         : ConnectionTuple(srcIp, dstIp, srcPort, dstPort, proto)
         { }
-    FullconeExtTuple(ConnectionTuple bt)
+    AddrrTuple(ConnectionTuple bt)
         : ConnectionTuple(bt.getSrcIP(), bt.getDstIP(), bt.getSport(), bt.getDport(), bt.getProto()) { }
 
-    bool operator==(const FullconeExtTuple& ct) const {
-        return (std::tie(dstIp_, dport_, proto_) == std::tie(ct.dstIp_, ct.dport_, ct.proto_));
+    bool operator==(const AddrrTuple& ct) const {
+        return (std::tie(srcIp_, proto_) == std::tie(ct.srcIp_, ct.proto_));
     }
-    bool operator<(const FullconeExtTuple& ct) const {
-        return (std::tie(dstIp_, dport_, proto_) < std::tie(ct.dstIp_, ct.dport_, ct.proto_));
-    }
-};
-
-
-class AddrrExtTuple : public ConnectionTuple
-{
- public:
-    AddrrExtTuple(PacketPtr pkt)
-        : ConnectionTuple(pkt)
-        { }
-    AddrrExtTuple(uint32_t srcIp, uint32_t dstIp, uint16_t srcPort, uint16_t dstPort, uint8_t proto)
-        : ConnectionTuple(srcIp, dstIp, srcPort, dstPort, proto)
-        { }
-    AddrrExtTuple(ConnectionTuple bt)
-        : ConnectionTuple(bt.getSrcIP(), bt.getDstIP(), bt.getSport(), bt.getDport(), bt.getProto()) { }
-
-    bool operator==(const AddrrExtTuple& ct) const {
-        return (std::tie(srcIp_, dstIp_, dport_, proto_) == std::tie(ct.srcIp_, ct.dstIp_, ct.dport_, ct.proto_));
-    }
-    bool operator<(const AddrrExtTuple& ct) const {
-        return (std::tie(srcIp_, dstIp_, dport_, proto_) < std::tie(ct.srcIp_, ct.dstIp_, ct.dport_, ct.proto_));
+    bool operator<(const AddrrTuple& ct) const {
+        return (std::tie(srcIp_, proto_) < std::tie(ct.srcIp_, ct.proto_));
     }
 };
 
