@@ -71,10 +71,10 @@ class SymNatTuple : public ConnectionTuple
         : ConnectionTuple(bt.getSrcIP(), bt.getDstIP(), bt.getSport(), bt.getDport(), bt.getProto()) { }
 
     bool operator==(const SymNatTuple& ct) const {
-        return (std::tie(srcIp_, sport_, proto_) == std::tie(ct.srcIp_, ct.sport_, ct.proto_));
+        return (std::tie(srcIp_, sport_, dport_, proto_) == std::tie(ct.srcIp_, ct.sport_, ct.dport_, ct.proto_));
     }
     bool operator<(const SymNatTuple& ct) const {
-        return (std::tie(srcIp_, sport_, proto_) < std::tie(ct.srcIp_, ct.sport_, ct.proto_));
+        return (std::tie(srcIp_, sport_, dport_, proto_) < std::tie(ct.srcIp_, ct.sport_, ct.dport_, ct.proto_));
     }
 };
 
@@ -92,10 +92,10 @@ class AddrrTuple : public ConnectionTuple
         : ConnectionTuple(bt.getSrcIP(), bt.getDstIP(), bt.getSport(), bt.getDport(), bt.getProto()) { }
 
     bool operator==(const AddrrTuple& ct) const {
-        return (std::tie(srcIp_, proto_) == std::tie(ct.srcIp_, ct.proto_));
+        return (std::tie(srcIp_, dstIp_, dport_, proto_) == std::tie(ct.srcIp_, ct.dstIp_, ct.dport_, ct.proto_));
     }
     bool operator<(const AddrrTuple& ct) const {
-        return (std::tie(srcIp_, proto_) < std::tie(ct.srcIp_, ct.proto_));
+        return (std::tie(srcIp_, dstIp_, dport_, proto_) < std::tie(ct.srcIp_, ct.dstIp_, ct.dport_, ct.proto_));
     }
 };
 

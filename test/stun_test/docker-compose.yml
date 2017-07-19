@@ -1,23 +1,27 @@
-version: '2'
+version: '2.1'
 services:
   internet-router:
     build: stunnode
-    command: router.sh "10.42.0.1"
+    command: inet_router.sh
     privileged: true
     networks:
       default:
       internet:
         ipv4_address: 10.42.0.1
+
   client-router:
     build: stunnode
+    command: router.sh 10.42.1.0/24 10.42.1.2
+    privileged: true
+    volumes:
+      - ./data:/data
     networks:
       internet:
       client:
         ipv4_address: 10.42.1.1
-    command: router.sh 10.42.1.1
-    privileged: true
     environment:
       - GATEWAY=10.42.0.1
+      - NATTYPE=${NATTYPE}
     
   stun-server:
     build: stunnode
@@ -26,16 +30,21 @@ services:
     networks:
       internet:
         ipv4_address: 10.42.0.103
-    privileged: true
     environment:
       - GATEWAY=10.42.0.1
       - PRIMARY_IP=10.42.0.103
       - ALT_IP=10.42.0.104
   stun-client:
     build: stunnode
+    command: tail -f /dev/null
+    privileged: true
+    volumes:
+      - ./data:/data
+    networks:
+      client:
+        ipv4_address: 10.42.1.2
     environment:
       - GATEWAY=10.42.1.1
-    command: stun 10.42.0.103
 
 networks:
   internet:

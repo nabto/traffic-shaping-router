@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function usage {
-    echo "usage $0 insideIp subnetInside"
+    echo "usage $0 subnetInside insideIp"
     exit 1
 }
 

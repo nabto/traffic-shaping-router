@@ -130,7 +130,7 @@ bool AddrrNatFilter::filterPacket(PacketPtr pkt){
     }
     return false;
 }
-void AddrrNatFilter::removeFromMaps(ConnectionTuple tup){
+void AddrrNatFilter::removeFromMaps(AddrrTuple tup){
     std::lock_guard<std::mutex> lock(mutex_);
     if(connMap_.find(tup) != connMap_.end()){
         connMap_.erase(tup);

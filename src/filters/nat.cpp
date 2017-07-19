@@ -36,22 +36,22 @@ void Nat::handlePacket(PacketPtr pkt) {
     std::cout << "new packet: " << std::endl;
     pkt->dump();
 #endif
-    if(mapper_->mapPacket(pkt)){
+
+    if(pkt->isIngoing()){
         if(filter_->filterPacket(pkt)){
-            next_->handlePacket(pkt);
-            return;
+            if(mapper_->mapPacket(pkt)){
+                next_->handlePacket(pkt);
+                return;
+            }
         }
-#ifdef TRACE_LOG
-        else {
-            std::cout << "Packet was dropped by Nat Filtering" << std::endl;
+    } else{
+        if(mapper_->mapPacket(pkt)){
+            if(filter_->filterPacket(pkt)){
+                next_->handlePacket(pkt);
+                return;
+            }
         }
-#endif
     }
-#ifdef TRACE_LOG
-    else {
-        std::cout << "Packet was dropped by Nat mapping" << std::endl;
-    }
-#endif
 }
 
 void Nat::setDnatRule(std::string ip, uint16_t extPort, uint16_t intPort){
@@ -96,15 +96,19 @@ bool Nat::init() {
     if (type_ == PORT_R_NAT) {
         filter_ = std::make_shared<PortrSymNatFilter>(connectionTimeout_);
         mapper_ = std::make_shared<NatMapper>(ipInt_, ipExt_, connectionTimeout_);
+        std::cout << "Nat filter initialized as Port Restricted Nat" << std::endl;
     } else if(type_ == ADDR_R_NAT) {
         filter_ = std::make_shared<AddrrNatFilter>(connectionTimeout_);
         mapper_ = std::make_shared<NatMapper>(ipInt_, ipExt_, connectionTimeout_);
+        std::cout << "Nat filter initialized as Address Restricted Nat" << std::endl;
     } else if(type_ == SYM_NAT) {
         filter_ = std::make_shared<PortrSymNatFilter>(connectionTimeout_);
         mapper_ = std::make_shared<SymNatMapper>(ipInt_, ipExt_, connectionTimeout_);
+        std::cout << "Nat filter initialized as Symetric Nat" << std::endl;
     } else if(type_ == FULL_CONE_NAT) {
         filter_ = std::make_shared<FullconeNatFilter>(connectionTimeout_);
         mapper_ = std::make_shared<NatMapper>(ipInt_, ipExt_, connectionTimeout_);
+        std::cout << "Nat filter initialized as Fullcone Nat" << std::endl;
     } else {
         std::cout << "Nat init failed: type was invalid. Nat type was: " << type_ << std::endl;
         return false;

@@ -27,7 +27,7 @@ class PortrSymNatFilter : public NatFilter, public std::enable_shared_from_this<
     ~PortrSymNatFilter(){}
     bool filterPacket(PacketPtr pkt);
  protected:
-    std::map<SymNatTuple, ConnectionEntryWeakPtr> connMap_;
+    std::map<ConnectionTuple, ConnectionEntryWeakPtr> connMap_;
     void removeFromMaps(ConnectionTuple tup);
 };
 
@@ -39,7 +39,7 @@ class AddrrNatFilter : public NatFilter, public std::enable_shared_from_this<Add
     bool filterPacket(PacketPtr pkt);
  protected:
     std::map<AddrrTuple, ConnectionEntryWeakPtr> connMap_;
-    void removeFromMaps(ConnectionTuple tup);
+    void removeFromMaps(AddrrTuple tup);
 };
 
 class FullconeNatFilter : public NatFilter, public std::enable_shared_from_this<FullconeNatFilter>
