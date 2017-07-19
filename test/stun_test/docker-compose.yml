@@ -1,0 +1,57 @@
+version: '2'
+services:
+  internet-router:
+    build: stunnode
+    command: router.sh "10.42.0.1"
+    privileged: true
+    networks:
+      default:
+      internet:
+        ipv4_address: 10.42.0.1
+  client-router:
+    build: stunnode
+    networks:
+      internet:
+      client:
+        ipv4_address: 10.42.1.1
+    command: router.sh 10.42.1.1
+    privileged: true
+    environment:
+      - GATEWAY=10.42.0.1
+    
+  stun-server:
+    build: stunnode
+    command: stun.sh
+    privileged: true
+    networks:
+      internet:
+        ipv4_address: 10.42.0.103
+    privileged: true
+    environment:
+      - GATEWAY=10.42.0.1
+      - PRIMARY_IP=10.42.0.103
+      - ALT_IP=10.42.0.104
+  stun-client:
+    build: stunnode
+    environment:
+      - GATEWAY=10.42.1.1
+    command: stun 10.42.0.103
+
+networks:
+  internet:
+    driver: macvlan
+    internal: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.42.0.0/24
+          ip_range: 10.42.0.64/26
+
+  client:
+    driver: macvlan
+    internal: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.42.1.0/24
+          ip_range: 10.42.1.64/26
