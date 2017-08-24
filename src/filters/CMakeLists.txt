@@ -4,6 +4,7 @@ set(target_src
    ${CMAKE_CURRENT_SOURCE_DIR}/nat_mapper.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/nat_filters.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/shaper.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_delay.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/output.cpp
    PARENT_SCOPE
 )
@@ -17,6 +18,7 @@ set(target_hdr
    ${CMAKE_CURRENT_SOURCE_DIR}/nat_filters.hpp
    ${CMAKE_CURRENT_SOURCE_DIR}/output.hpp
    ${CMAKE_CURRENT_SOURCE_DIR}/shaper.hpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_delay.hpp
    ${CMAKE_CURRENT_SOURCE_DIR}/tbf_filter.hpp
    PARENT_SCOPE
 )

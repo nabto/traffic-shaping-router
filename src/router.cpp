@@ -28,17 +28,19 @@ Router::Router() {
 
 bool Router::init() {
     std::cout << "using all filters" << std::endl;
-    loss_ = std::make_shared<Loss>();
-    nat_ = std::make_shared<Nat>();
-    burst_ = std::make_shared<Burst>();
-    delay_ = std::make_shared<StaticDelay>();
-    tbf_ = std::make_shared<TokenBucketFilter>();
+    loss_   = std::make_shared<Loss>();
+    nat_    = std::make_shared<Nat>();
+    burst_  = std::make_shared<Burst>();
+    delay_  = std::make_shared<StaticDelay>();
+    dynDel_ = std::make_shared<DynamicDelay>();
+    tbf_    = std::make_shared<TokenBucketFilter>();
     output_ = std::make_shared<Output>();
     setNext(loss_);
     loss_->setNext(nat_);
     nat_->setNext(burst_);
     burst_->setNext(delay_);
-    delay_->setNext(tbf_);
+    delay_->setNext(dynDel_);
+    dynDel_->setNext(tbf_);
     tbf_->setNext(output_);
     
     initialized_ = true;
@@ -83,7 +85,15 @@ bool Router::init(std::vector<std::string> filters) {
             tbf_ = std::make_shared<TokenBucketFilter>();
             last->setNext(tbf_);
             last = tbf_;
-        } else {
+        } else if (it.compare("DynamicDelay") == 0){
+#ifdef TRACE_LOG
+            std::cout << "adding DynamicDelay filter" << std::endl;
+#endif
+            dynDel_ = std::make_shared<DynamicDelay>();
+            last->setNext(dynDel_);
+            last = dynDel_;
+            
+        }else {
             std::cout << "unknown filter " << it << std::endl;
         }
     }
@@ -165,6 +175,12 @@ bool Router::execute() {
     if(delay_) {
         if(!delay_->init()){
             std::cout << "initialization of delay filter failed" << std::endl;
+            return false;
+        }
+    }
+    if(dynDel_) {
+        if(!dynDel_->init()){
+            std::cout << "initialization of Dynamic delay filter failed" << std::endl;
             return false;
         }
     }

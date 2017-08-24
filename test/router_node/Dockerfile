@@ -1,4 +1,4 @@
-FROM tianon/debian:testing
+FROM debian:stretch
 RUN rm -rf /var/lib/apt/lists && mkdir /var/lib/apt/lists
 RUN apt-get update && apt-get install -y openssh-server net-tools wget iproute iptables libnet-dev libnetfilter-queue-dev libboost-program-options-dev libboost-thread-dev libboost-system-dev tcpdump less libstdc++6 binutils libboost1.62-all-dev vim dnsutils gdb ethtool valgrind strace golang --force-yes
 

@@ -2,7 +2,7 @@
 
 function help {
     echo "accepts the following commands"
-    echo " create_containers"
+    echo " create"
     echo " run_test"
     echo " test"
     echo " clean"

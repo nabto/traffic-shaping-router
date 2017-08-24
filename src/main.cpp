@@ -35,11 +35,13 @@ int main (int argc, char* argv[])
         ("tbf-out-max-tokens", po::value<int>()->composing(), "The maximum amount of tokens for the token bucket filter")
         ("tbf-out-max-packets", po::value<int>()->composing(), "The packet queue length of the token bucket filter")
         ("tbf-out-red-start", po::value<int>()->composing(), "The packet queue length at which random early drop kick in")
+        ("dyn-delays", po::value<std::vector<int> >()->multitoken(), "Delay values for the dynamic delay filter")
+        ("dyn-delay-res", po::value<int>()->composing(), "The time resolution of the delay values for delay filter")
         ("burst-dur", po::value<int>()->composing(), "The time in ms when packets are collected for bursts")
         ("burst-sleep", po::value<int>()->composing(), "The time in ms between bursts")
         ("nat-ext-port,e", po::value<std::vector<uint16_t> >()->multitoken(),"External port numbers for port forwarding")
         ("nat-int-port,i", po::value<std::vector<uint16_t> >()->multitoken(),"Internal port numbers for port forwarding, if defined must have same length as nat-ext-port, if not defined nat-ext-port will be reused for internal ports")
-        ("filters" , po::value<std::vector<std::string> >()->multitoken(),"Ordered list of filters to use, valid filters are: StaticDelay, Loss, Nat, Burst, TokenBucketFilter")
+        ("filters" , po::value<std::vector<std::string> >()->multitoken(),"Ordered list of filters to use, valid filters are: StaticDelay, Loss, Nat, Burst, TokenBucketFilter, DynamicDelay")
         ;
 
     po::variables_map vm;
@@ -144,6 +146,17 @@ int main (int argc, char* argv[])
     if (vm.count("burst-sleep")){
         sleepDur = vm["burst-sleep"].as<int>();
         rt->setSleepDuration(sleepDur);
+    }
+
+    if (vm.count("dyn-delays")){
+        if (vm.count("dyn-delay-res")){
+            std::vector<int> dd = vm["dyn-delays"].as<std::vector<int> >();
+            int ddr = vm["dyn-delay-res"].as<int>();
+            rt->setDynamicDelays(dd,ddr);
+        } else {
+            std::cerr << "dyn-delays where set without dyn-delay-res" << std::endl << desc << std::endl;
+            exit(1);
+        }
     }
 
     if (vm.count("nat-ext-port")){

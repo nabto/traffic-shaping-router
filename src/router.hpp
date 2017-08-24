@@ -5,6 +5,7 @@
 #include "packet.hpp"
 #include "filter.hpp"
 #include <filters/shaper.hpp>
+#include <filters/dynamic_delay.hpp>
 #include <filters/nat.hpp>
 #include <filters/burst_filter.hpp>
 #include <filters/tbf_filter.hpp>
@@ -54,6 +55,8 @@ class Router : public Filter, public std::enable_shared_from_this<Router>
     void setTbfOutMaxTokens(uint32_t t) {if(tbf_){tbf_->setOutMaxTokens(t);}}
     void setTbfOutMaxPackets(uint32_t p) {if(tbf_){tbf_->setOutMaxPackets(p);}}
     void setTbfOutRedStart(uint32_t s) {if(tbf_){tbf_->setOutRedStart(s);}}
+    // DynamicDelay filter
+    void setDynamicDelays(std::vector<int> d, int r){if(dynDel_){dynDel_->setDelays(d,r);}}
     
     // Since router is the first filter, handlePacket is not used
     void handlePacket(PacketPtr pkt);
@@ -65,6 +68,7 @@ class Router : public Filter, public std::enable_shared_from_this<Router>
     std::shared_ptr<Burst> burst_;
     std::shared_ptr<TokenBucketFilter> tbf_;
     std::shared_ptr<Output> output_;
+    std::shared_ptr<DynamicDelay> dynDel_;
     bool initialized_;
     uint32_t extIp_;
 };

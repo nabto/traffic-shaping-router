@@ -5,6 +5,7 @@
 #include <filters/burst_filter.hpp>
 #include <filters/tbf_filter.hpp>
 #include <filters/output.hpp>
+#include <filters/dynamic_delay.hpp>
 
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE router_filter_test
@@ -39,6 +40,20 @@ class TestFilter : public Filter, public std::enable_shared_from_this<TestFilter
     bool pktHandled_;
 };
 
+
+BOOST_AUTO_TEST_CASE(TestDynamicDelayFilter)
+{
+    std::shared_ptr<DynamicDelay> dd;
+    dd = std::make_shared<DynamicDelay>();
+    std::vector<int> tmpQ = dd->setDelays({0,8,5},4);
+    std::cout << "tmpQ:\n[";
+    for (auto i : tmpQ){
+        std::cout << i;
+    }
+    std::cout << "]" << std::endl;
+    std::vector<int> v = {0,2,4,6,8,7,6,5,5,3,2,1};
+    BOOST_REQUIRE((tmpQ == v));
+}    
 
 
 //BOOST_AUTO_TEST_SUITE(basic)

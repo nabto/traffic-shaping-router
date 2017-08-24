@@ -37,7 +37,7 @@ enable_testing()
 
 include_directories("/usr/include/boost")
 #include_directories("/usr/include/boost/test")
-set(CFLAGS "-fPIC -Wall -Werror -g")
+set(CFLAGS "-fPIC -Wall -g")
 add_definitions(-std=c++11)
 add_definitions(${CFLAGS})
 
