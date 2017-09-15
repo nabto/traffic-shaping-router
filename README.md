@@ -1,6 +1,27 @@
 # traffic shaping router
 
-The Traffic shaping router is a linux router designed to emulate different network behaviour for the purpose of testing software. The router is based on iptables, which takes all packets directly from the network interfaces, and sends them through a series of chains which can change packets and make decisions on where to send packets. Iptables uses 5 main chains, PREROUTING applies DNAT as the first chain when a packet is received on an interface. A routing decision is then made whether the packet is destined for the loacl host or is to be forwarded to another interface. Packets for the local host is send to the INPUT chain whereas packets for other hosts is send to the FORWARD chain. These chains can then apply firewall rules where unwanted packets can be dropped, and wanted packets can be passed on. Packets originating from the local host is send to the OUTPUT chain which can perform similar firewall actions. When a packet leaves the OUTPUT or FORWARD chains, they are sent to the POSTROUTING chain which applies SNAT before sending it out on the network interface.
+## Motivation
+The Traffic shaping router is a linux router designed to emulate different network behaviour for the purpose of testing software. The router is motivated by the limited flexibility and general complexity of tc in the linux kernel. The netEm option in linux tc can impose network constraints on traffic, but is designed for steady state network emulation. Even with the reordering option turned off, varying delays either by reconfiguration or by use of the jitter functionallity causes packet reordering in the emulator. Varying delays in network will often be caused by cross-traffic from other users causing longer queues in network equipment, which should not impose packet reordering. This functionallity is not available in netEm. Linux tc is also designed to work on outgoing traffic only, though this can be circumvented by piping traffic, this is a hassle to get working. netEm offers thoughput limitation through the rate option. This option is made as a replacement for the TBF option in tc since using TBF together with netEm required sequential queueing disciplines in tc which, though possible, is hard to get working. If other queueing disciplines is to be emulated (like RED or HTB), these would still require sequential queing disciplines in tc. The Traffic Shaping Router aims to simplify network emulation significantly, while increasing the flexibility of the emulation. The Traffic Shaping Router takes each packet and passes it though a simple chain of filters which can alter, delay, or drop packets this approach greatly simplifies the usage compared to using several queing disciplines in tc. The Traffic Shaping Router defines a simple c++ interface for the filters. This means any functionallity not directly covered by existing filters can easily be added by implementing a new filter. As an example of the simplicity of implementing a filter, below is an example of a filter randomly dropping packets with a 1% probability:
+
+```
+class Loss : public Filter, public std::enable_shared_from_this<Loss>
+{
+ public:
+    Loss(): loss_(0) {srand (static_cast <unsigned> (time(0)));}
+    ~Loss() {}
+    // Packet handler which droppes packets randomly
+    void handlePacket(PacketPtr pkt){
+        float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+        if (r < loss_){
+            return;
+        }
+        next_->handlePacket(pkt);
+    }
+};
+```
+
+## Basic design
+The router is based on iptables, which takes all packets directly from the network interfaces, and sends them through a series of chains which can change packets and make decisions on where to send packets. Iptables uses 5 main chains, PREROUTING applies DNAT as the first chain when a packet is received on an interface. A routing decision is then made whether the packet is destined for the loacl host or is to be forwarded to another interface. Packets for the local host is send to the INPUT chain whereas packets for other hosts is send to the FORWARD chain. These chains can then apply firewall rules where unwanted packets can be dropped, and wanted packets can be passed on. Packets originating from the local host is send to the OUTPUT chain which can perform similar firewall actions. When a packet leaves the OUTPUT or FORWARD chains, they are sent to the POSTROUTING chain which applies SNAT before sending it out on the network interface.
 
 The router works by forwarding all packets coming into the INPUT and FORWARD chains to the user space by using nf queue. This means the firewall rules applied to these two chains should put packets into the nf queue (the router uses queue number 0). The commands for applying these rules is shown here:
 
