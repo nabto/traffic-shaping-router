@@ -1,0 +1,47 @@
+version: '2.1'
+services:
+  router:
+    build: ../router_node
+    command: nat64.sh
+    privileged: true
+    volumes:
+      - ./data:/data
+    networks:
+      default:
+      pinger_net:
+        ipv6_address: 2001:db8:1235::3
+    environment:
+        - DUMPNAME=router
+
+  pinger:
+    build: ../ping_node
+    command: ping6.sh
+    privileged: true
+    cap_add:
+      - ALL
+    dns:
+      - 2001:db8:1235::3
+    volumes:
+      - ./data:/data
+    networks:
+      pinger_net:
+        ipv6_address: 2001:db8:1235::4
+    environment:
+      - GATEWAY6=2001:db8:1235::3
+      - DUMPNAME=pinger
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 10.42.0.0/24
+  pinger_net:
+    driver: macvlan
+    internal: true
+    enable_ipv6: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 2001:db8:1235::/64
+          ip_range: 2001:db8:1235::/94
+

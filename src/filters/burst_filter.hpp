@@ -33,7 +33,7 @@ class Burst : public Filter, public std::enable_shared_from_this<Burst>
         t->async_wait(boost::bind(f));
         return true;
     }
-    void handlePacket(PacketPtr pkt){
+    void handlePacket(std::shared_ptr<ParentPacket> pkt){
         if(sleeping_){
             next_->handlePacket(pkt);
         } else {
@@ -49,7 +49,7 @@ class Burst : public Filter, public std::enable_shared_from_this<Burst>
     void startSleeping(){sleeping_ = true;}
     void stopSleeping(){sleeping_ = false;}
  private:
-    std::vector<PacketPtr> queue_;
+    std::vector<std::shared_ptr<ParentPacket> > queue_;
     std::mutex mutex_;
     boost::posix_time::time_duration burstDur_;
     boost::posix_time::time_duration sleepDur_;

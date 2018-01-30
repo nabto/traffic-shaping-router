@@ -130,7 +130,6 @@ class AsyncQueue
             {
                 boost::mutex::scoped_lock lock(mutex_);
                 if (stopped_) {
-                    Data d;
                     ioService_.post(boost::bind(AsyncQueue<Data>::stoppedHandler, callback));
                     return;
                 }

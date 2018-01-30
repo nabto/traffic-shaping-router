@@ -36,7 +36,7 @@ bool DynamicDelay::init() {
 DynamicDelay::~DynamicDelay() {
 }
 
-void DynamicDelay::handlePacket(PacketPtr pkt) {
+void DynamicDelay::handlePacket(std::shared_ptr<ParentPacket> pkt) {
     queue_.push(pkt);
 }
 
@@ -53,7 +53,7 @@ void DynamicDelay::delayPopHandler(const std::error_code& ec, const int d) {
     };
     t->async_wait(boost::bind(f));
 }
-void DynamicDelay::popHandler(const std::error_code& ec, const PacketPtr pkt) {
+void DynamicDelay::popHandler(const std::error_code& ec, const std::shared_ptr<ParentPacket> pkt) {
     boost::posix_time::time_duration delay;
     boost::posix_time::ptime now(boost::posix_time::microsec_clock::local_time());
     if(ec == queue_error_code::stopped){

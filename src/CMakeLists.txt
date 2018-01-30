@@ -4,11 +4,13 @@ project (Router)
 set(target_src
   tp_service.cpp
   packet.cpp
+  packet6.cpp
   )
 
 set(target_hdr
   filter.hpp
   packet.hpp
+  packet6.hpp
   )
 include_directories(${CMAKE_SOURCE_DIR})
 add_subdirectory("filters")

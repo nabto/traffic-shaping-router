@@ -31,7 +31,8 @@ Nat::Nat(){
 
 Nat::~Nat(){}
 
-void Nat::handlePacket(PacketPtr pkt) {
+void Nat::handlePacket(std::shared_ptr<ParentPacket> parPkt) {
+    PacketPtr pkt = std::dynamic_pointer_cast<Packet>(parPkt);
 #ifdef TRACE_LOG
     std::cout << "new packet: " << std::endl;
     pkt->dump();

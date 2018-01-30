@@ -16,11 +16,11 @@ bool StaticDelay::init() {
 StaticDelay::~StaticDelay() {
 }
 
-void StaticDelay::handlePacket(PacketPtr pkt) {
+void StaticDelay::handlePacket(std::shared_ptr<ParentPacket> pkt) {
     queue_.push(pkt);
 }
 
-void StaticDelay::popHandler(const std::error_code& ec, const PacketPtr pkt) {
+void StaticDelay::popHandler(const std::error_code& ec, const std::shared_ptr<ParentPacket> pkt) {
     boost::posix_time::time_duration delay;
     boost::posix_time::ptime now(boost::posix_time::microsec_clock::local_time());
     if(ec == queue_error_code::stopped){
@@ -45,9 +45,10 @@ void StaticDelay::popHandler(const std::error_code& ec, const PacketPtr pkt) {
 
 /* ========== LOSS FILTER =========== */
 
-void Loss::handlePacket(PacketPtr pkt) {
+void Loss::handlePacket(std::shared_ptr<ParentPacket> pkt) {
     float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
     if (r < loss_){
+        pkt->setVerdict(false);
         return;
     }
     next_->handlePacket(pkt);

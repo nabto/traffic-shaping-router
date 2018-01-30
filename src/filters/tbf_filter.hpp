@@ -37,7 +37,7 @@ class TokenBucket : public Filter, public std::enable_shared_from_this<TokenBuck
         
     }
     
-    void handlePacket(PacketPtr pkt) {
+    void handlePacket(std::shared_ptr<ParentPacket> pkt) {
         {
             std::lock_guard<std::mutex> lock(mutex_);
             if(queue_.size() <  maxPackets_){
@@ -51,6 +51,7 @@ class TokenBucket : public Filter, public std::enable_shared_from_this<TokenBuck
 #ifdef TRACE_LOG
             else {
                 std::cout << "Queue full packet dropped" << std::endl;
+                pkt->setVerdict(false);
             }
 #endif
         }
@@ -64,7 +65,7 @@ class TokenBucket : public Filter, public std::enable_shared_from_this<TokenBuck
 
  private:
     std::mutex mutex_;
-    std::queue<PacketPtr> queue_;
+    std::queue<std::shared_ptr<ParentPacket> > queue_;
     uint32_t tokens_;
     uint32_t maxTokens_;
     uint32_t maxPackets_;
@@ -109,7 +110,7 @@ class TokenBucketFilter : public Filter, public std::enable_shared_from_this<Tok
         return true;
     }
     
-    void handlePacket(PacketPtr pkt) {
+    void handlePacket(std::shared_ptr<ParentPacket> pkt) {
         if(pkt->isIngoing()) {
             inTb_->handlePacket(pkt);
         } else {

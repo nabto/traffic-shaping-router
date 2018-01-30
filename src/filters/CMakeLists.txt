@@ -5,11 +5,14 @@ set(target_src
    ${CMAKE_CURRENT_SOURCE_DIR}/nat_filters.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/shaper.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_delay.cpp
-   ${CMAKE_CURRENT_SOURCE_DIR}/output.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/output_libnet.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/output6_libnet.cpp
    PARENT_SCOPE
 )
 set(target_hdr
    ${target_hdr}
+   ${CMAKE_CURRENT_SOURCE_DIR}/input.hpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/input_drop.hpp
    ${CMAKE_CURRENT_SOURCE_DIR}/burst_filter.hpp
    ${CMAKE_CURRENT_SOURCE_DIR}/connection_entry.hpp
    ${CMAKE_CURRENT_SOURCE_DIR}/connection_tuple.hpp
@@ -17,6 +20,8 @@ set(target_hdr
    ${CMAKE_CURRENT_SOURCE_DIR}/nat_mapper.hpp
    ${CMAKE_CURRENT_SOURCE_DIR}/nat_filters.hpp
    ${CMAKE_CURRENT_SOURCE_DIR}/output.hpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/output_libnet.hpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/output6_libnet.hpp
    ${CMAKE_CURRENT_SOURCE_DIR}/shaper.hpp
    ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_delay.hpp
    ${CMAKE_CURRENT_SOURCE_DIR}/tbf_filter.hpp

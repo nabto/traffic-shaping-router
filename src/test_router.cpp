@@ -25,7 +25,7 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *
 Router::Router(){
 }
 
-void Router::init(){
+void Router::init(std::string extIf){
     auto self = shared_from_this();
     nat_ = std::make_shared<Nat>();
     delay_ = std::make_shared<StaticDelay>();
@@ -34,7 +34,8 @@ void Router::init(){
     loss_->setNext(nat_);
     nat_->setNext(delay_);
     delay_->setNext(self);
-
+    extIf_ = extIf;
+    
 }
 
 Router::~Router(){

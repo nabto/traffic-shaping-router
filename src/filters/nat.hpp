@@ -21,7 +21,7 @@ class Nat : public Filter, public std::enable_shared_from_this<Nat>
     Nat();
     ~Nat();
     // Function handling incoming packets
-    void handlePacket(PacketPtr pkt);
+    void handlePacket(std::shared_ptr<ParentPacket> pkt);
 
     // Functions for Nat configuration 
     void setIPs(std::string ipExt, std::string ipInt);

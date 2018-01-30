@@ -23,8 +23,8 @@ class DynamicDelay : public Filter, public std::enable_shared_from_this<DynamicD
     DynamicDelay();
     ~DynamicDelay();
     bool init();
-    void handlePacket(PacketPtr pkt);
-    void popHandler(const std::error_code& ec, const PacketPtr pkt);
+    void handlePacket(std::shared_ptr<ParentPacket> pkt);
+    void popHandler(const std::error_code& ec, const std::shared_ptr<ParentPacket> pkt);
     void delayPopHandler(const std::error_code& ec, const int d);
 
     /* Defining the delay curve used by the filter.
@@ -46,7 +46,7 @@ class DynamicDelay : public Filter, public std::enable_shared_from_this<DynamicD
     std::mutex mutex_;
     boost::posix_time::time_duration delay_;
     boost::posix_time::time_duration int_;
-    AsyncQueue<PacketPtr> queue_;
+    AsyncQueue<std::shared_ptr<ParentPacket>> queue_;
     AsyncQueue<int> delayQ_;
     boost::asio::io_service* ioService_;
 };

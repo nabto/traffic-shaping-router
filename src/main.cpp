@@ -10,6 +10,7 @@ int main (int argc, char* argv[])
     std::string extIp;
     std::string intIp;
     std::string natType;
+    std::string extIf;
     int del = 0;
     float los = 0;
     int burstDur = 0;
@@ -21,6 +22,7 @@ int main (int argc, char* argv[])
 
     desc.add_options()
         ("help,h", "Print usage message")
+        ("ext-if", po::value<std::string>()->composing(), "The external interface of the router node, used to destinquish ingoing from outgoing traffic.")
         ("nat-ext-ip", po::value<std::string>()->composing(), "The ip of the external interface of the router (Required with Nat filter)")
         ("nat-int-ip", po::value<std::string>()->composing(), "The ip of the internal interface of the router (Required with Nat filter)")
         ("nat-type", po::value<std::string>()->composing(), "The type of NAT to be applied, valid types: portr, addrr, fullcone, symnat")
@@ -42,6 +44,8 @@ int main (int argc, char* argv[])
         ("nat-ext-port,e", po::value<std::vector<uint16_t> >()->multitoken(),"External port numbers for port forwarding")
         ("nat-int-port,i", po::value<std::vector<uint16_t> >()->multitoken(),"Internal port numbers for port forwarding, if defined must have same length as nat-ext-port, if not defined nat-ext-port will be reused for internal ports")
         ("filters" , po::value<std::vector<std::string> >()->multitoken(),"Ordered list of filters to use, valid filters are: StaticDelay, Loss, Nat, Burst, TokenBucketFilter, DynamicDelay")
+        ("ipv6", "use IPv6 instead of IPv4")
+        ("accept-mode", "run the router in accept mode instead of drop mode")
         ;
 
     po::variables_map vm;
@@ -57,12 +61,26 @@ int main (int argc, char* argv[])
         exit(0);
     }
 
+    if (vm.count("ext-if")){
+        extIf = vm["ext-if"].as<std::string>();
+    } else {
+        std::cerr << "The external interface is required\n" << desc;
+        exit(1);
+    }
+    
     if (vm.count("filters")){
         std::cout << "using selected filters " << std::endl;
         std::vector<std::string> filters = vm["filters"].as<std::vector<std::string> >();
-        rt->init(filters);
+        if (vm.count("accept-mode")){
+            filters.insert(filters.begin(), "Input");
+            filters.push_back("Output");
+        } else {
+            filters.insert(filters.begin(), "InputDrop");
+            filters.push_back("OutputLibnet");
+        }
+        rt->init(extIf, filters);
     } else {
-        rt->init();
+        rt->init(extIf);
     }
     
     if (vm.count("nat-ext-ip")){
@@ -178,6 +196,10 @@ int main (int argc, char* argv[])
     }
 
     std::cout << "Router started with delay: " << del << ", loss: " << los << ", int IP: " << intIp << ", and ext IP " << extIp << std::endl;
-    rt->execute();
+    if (vm.count("ipv6")){
+        rt->execute6();
+    } else { 
+        rt->execute();
+    }
 
 }

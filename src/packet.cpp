@@ -1,5 +1,4 @@
 #include <iostream>
-#include <arpa/inet.h>
 #include <net/if.h>
 #include <stdio.h>
 #include <libnet.h>
@@ -9,13 +8,11 @@
 
 #include "packet.hpp"
 
-#include <netinet/udp.h>
-#include <netinet/ip_icmp.h>
 #include <netinet/ip.h>
-#include <netinet/tcp.h>
 
-
-Packet::Packet(struct nfq_data *nfa) : stamp_(boost::posix_time::microsec_clock::local_time()) {
+Packet::Packet(struct nfq_q_handle *qh,struct nfq_data *nfa) {
+    resetTimeStamp();
+    qh_ = qh;
     struct nfq_data* nfData = nfa;
     u_int32_t ifi;
     char buf[IF_NAMESIZE];
@@ -50,27 +47,8 @@ Packet::Packet(struct nfq_data *nfa) : stamp_(boost::posix_time::microsec_clock:
     srcIp_ = ntohl(ip->saddr);
     dstIp_ = ntohl(ip->daddr);
 
-    if (transProt_ == PROTO_UDP){
-        udphdr* udp = (udphdr*)(packetData_.data()+ipHdrLen_);
-        sport_ = ntohs(udp->uh_sport);
-        dport_ = ntohs(udp->uh_dport);
-    } else if (transProt_ == PROTO_TCP){
-#ifdef TRACE_LOG
-        std::cout << "Dumping entire TCP packet" << std::endl;
-        dumpMem((uint8_t*)&packetData_, packetDataLen_);
-#endif
-        tcphdr* tcp = (tcphdr *)((packetData_.data()+ipHdrLen_));
-        sport_ = ntohs(tcp->th_sport);
-        dport_ = ntohs(tcp->th_dport);
-#ifdef TRACE_LOG
-        std::cout << "TCP Packet with:\n\tdport: " << dport_ << "\n\tsport: " << sport_ << std::endl;
-#endif
-    } else if (transProt_ == PROTO_ICMP){
-        icmphdr* icmp = (icmphdr*)((packetData_.data()+ipHdrLen_));
-        icmpId_ = icmp->un.echo.id;
-        sport_ = icmpId_;
-        dport_ = icmpId_;
-    }
+    decodeTransportProtocol(transProt_, packetData_.data()+ipHdrLen_);
+
 #ifdef TRACE_LOG
     std::cout << "Dumping packet after construction: " << std::endl;
     dump();
@@ -78,9 +56,10 @@ Packet::Packet(struct nfq_data *nfa) : stamp_(boost::posix_time::microsec_clock:
 }
 
 // Dummy packet for testing purposes
-Packet::Packet() : stamp_(boost::posix_time::microsec_clock::local_time()) {
+Packet::Packet() {
+    resetTimeStamp();
     ipFrag_ = 5;
-    transProt_ = PROTO_TCP;
+    transProt_ = IPPROTO_TCP;
     srcIp_ = 33685514;
     dstIp_ = 33559212;
     ipHdrLen_ = 20;
@@ -89,9 +68,10 @@ Packet::Packet() : stamp_(boost::posix_time::microsec_clock::local_time()) {
     strOutboundInterface_ = "eth9";
 }
 
-Packet::Packet(uint32_t srcIp, uint32_t dstIp, uint16_t sport, uint16_t dport) : stamp_(boost::posix_time::microsec_clock::local_time()) {
+Packet::Packet(uint32_t srcIp, uint32_t dstIp, uint16_t sport, uint16_t dport) {
+    resetTimeStamp();
     ipFrag_ = 5;
-    transProt_ = PROTO_TCP;
+    transProt_ = IPPROTO_TCP;
     srcIp_ = srcIp;
     dstIp_ = dstIp;
     sport_ = sport;
@@ -131,13 +111,13 @@ void Packet::dump() {
            (dstIp_ >> 8) & 0xFF,
            dstIp_ & 0xFF);
 
-    if (transProt_ == PROTO_ICMP) {
+    if (transProt_ == IPPROTO_ICMP) {
         printf("\tICMP Packet\n");
         printf("\tid: %u\n", icmpId_);
-    } else if (transProt_ == PROTO_UDP) {
+    } else if (transProt_ == IPPROTO_UDP) {
         printf("\tUDP Source Port: %u\n",sport_);
         printf("\tUDP Destination Port: %u\n",dport_);
-    } else if (transProt_ == PROTO_TCP) {
+    } else if (transProt_ == IPPROTO_TCP) {
         printf("\tTCP Source Port: %d\n",sport_);
         printf("\tTCP Destination Port: %d\n",dport_);
     } else {

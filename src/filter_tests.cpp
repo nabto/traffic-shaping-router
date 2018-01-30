@@ -1,4 +1,4 @@
-#include "packet.hpp"
+#include "parent_packet.hpp"
 #include "filter.hpp"
 #include <filters/shaper.hpp>
 #include <filters/nat.hpp>
@@ -27,8 +27,8 @@ class TestFilter : public Filter, public std::enable_shared_from_this<TestFilter
         pktHandled_ = false;
     }
     ~TestFilter() {}
-    void handlePacket(PacketPtr pkt) {
-        pkt_ = pkt;
+    void handlePacket(std::shared_ptr<ParentPacket> pkt) {
+        pkt_ = std::dynamic_pointer_cast<Packet>(pkt);
         pktHandled_ = true;
     }
     bool handledPacket() {return pktHandled_;}
