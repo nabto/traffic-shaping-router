@@ -201,7 +201,7 @@ int Router::newPacket(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nf
     std::cout << "Dumping from newPacket" << std::endl;
     pkt->dump();
 #endif
-    input_->handlePacket(pkt);
+    start_->handlePacket(pkt);
     return 0;
 }
 
@@ -219,7 +219,7 @@ int Router::newPacket6(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct n
     std::cout << "Dumping from newPacket6" << std::endl;
     pkt->dump();
 #endif
-    input6_->handlePacket(pkt);
+    start6_->handlePacket(pkt);
     return 0;
 }
 

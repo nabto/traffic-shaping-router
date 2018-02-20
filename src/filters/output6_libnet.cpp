@@ -4,9 +4,6 @@
 #include <netinet/tcp.h>
 #include <netinet/ip6.h>
 
-#ifndef TRACE_LOG
-#define TRACE_LOG
-#endif
 
 Output6Libnet::Output6Libnet(): queue_(*(TpService::getInstance()->getIoService())) {
     l_ = libnet_init(LIBNET_RAW6, NULL, errbuf_);

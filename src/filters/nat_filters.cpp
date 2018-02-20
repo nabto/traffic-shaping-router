@@ -1,7 +1,6 @@
 
 #include "nat_filters.hpp"
 
-//#define TRACE_LOG
 
 void dumpConnMap(std::map<ConnectionTuple, ConnectionEntryWeakPtr> map){
     std::cout << "dumping map:" << std::endl;

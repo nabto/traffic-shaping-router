@@ -1,8 +1,6 @@
 
 #include "nat_mapper.hpp"
 
-//#define TRACE_LOG
-
 ///================ NAT MAPPER BASE CLASS IMPL ================ ///
 void NatMapperBase::setDnatRules(std::map<uint16_t, ConnectionTuple> rules){
     dnatRules_ = rules;

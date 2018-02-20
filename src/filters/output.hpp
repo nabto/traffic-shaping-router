@@ -19,7 +19,7 @@ class Output : public Filter, public std::enable_shared_from_this<Output>
     void handlePacket(std::shared_ptr<ParentPacket> pkt){
         pkt->setVerdict(true);
     }
-    void setQH(struct nfq_q_handle *qh){qh_ = qh; std::cout << "setQH called in Output" << std::endl;}
+    void setQH(struct nfq_q_handle *qh){qh_ = qh;}
 
  private:
     struct nfq_q_handle *qh_;

@@ -16,8 +16,6 @@
 
 
 
-//#define TRACE_LOG
-
 std::ostream& operator<<(std::ostream& os, const ConnectionTuple& ct) {
     os << "srcIp: " << ct.srcIp_ << " dstIp: " << ct.dstIp_ << " sport: " << ct.sport_ << " dport: " << ct.dport_;
     return os;
