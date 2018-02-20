@@ -23,6 +23,7 @@ services:
       - 2001:db8:1235::3
     volumes:
       - ./data:/data
+      - /lib/modules:/lib/modules
     networks:
       pinger_net:
         ipv6_address: 2001:db8:1235::4
