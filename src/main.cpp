@@ -39,11 +39,13 @@ int main (int argc, char* argv[])
         ("tbf-out-red-start", po::value<int>()->composing(), "The packet queue length at which random early drop kick in")
         ("dyn-delays", po::value<std::vector<int> >()->multitoken(), "Delay values for the dynamic delay filter")
         ("dyn-delay-res", po::value<int>()->composing(), "The time resolution of the delay values for delay filter")
+        ("dyn-losses", po::value<std::vector<float> >()->multitoken(), "Loss values for the dynamic loss filter")
+        ("dyn-loss-times", po::value<std::vector<int> >()->multitoken(), "time values for the dynamic loss filter")
         ("burst-dur", po::value<int>()->composing(), "The time in ms when packets are collected for bursts")
         ("burst-sleep", po::value<int>()->composing(), "The time in ms between bursts")
         ("nat-ext-port,e", po::value<std::vector<uint16_t> >()->multitoken(),"External port numbers for port forwarding")
         ("nat-int-port,i", po::value<std::vector<uint16_t> >()->multitoken(),"Internal port numbers for port forwarding, if defined must have same length as nat-ext-port, if not defined nat-ext-port will be reused for internal ports")
-        ("filters" , po::value<std::vector<std::string> >()->multitoken(),"Ordered list of filters to use, valid filters are: StaticDelay, Loss, Nat, Burst, TokenBucketFilter, DynamicDelay")
+        ("filters" , po::value<std::vector<std::string> >()->multitoken(),"Ordered list of filters to use, valid filters are: StaticDelay, Loss, Nat, Burst, TokenBucketFilter, DynamicDelay, DynamicLoss")
         ("ipv6", "use IPv6 instead of IPv4")
         ("accept-mode", "run the router in accept mode instead of drop mode")
         ;
@@ -173,6 +175,21 @@ int main (int argc, char* argv[])
             rt->setDynamicDelays(dd,ddr);
         } else {
             std::cerr << "dyn-delays where set without dyn-delay-res" << std::endl << desc << std::endl;
+            exit(1);
+        }
+    }
+
+    if (vm.count("dyn-losses")){
+        if (vm.count("dyn-loss-times")){
+            std::vector<float> dl = vm["dyn-losses"].as<std::vector<float> >();
+            std::vector<int> dlt = vm["dyn-loss-times"].as<std::vector<int>>();
+            if (dl.size() != dlt.size()) {
+                std::cerr << "dyn-losses and dyn-loss-times did not have matching lengths" << std::endl << desc << std::endl;
+                exit(1);
+            }
+            rt->setDynamicLosses(dlt,dl);
+        } else {
+            std::cerr << "dyn-losses where set without dyn-loss-times" << std::endl << desc << std::endl;
             exit(1);
         }
     }

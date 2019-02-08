@@ -5,6 +5,7 @@ set(target_src
    ${CMAKE_CURRENT_SOURCE_DIR}/nat_filters.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/shaper.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_delay.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_loss.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/output_libnet.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/output6_libnet.cpp
    PARENT_SCOPE
@@ -24,6 +25,7 @@ set(target_hdr
    ${CMAKE_CURRENT_SOURCE_DIR}/output6_libnet.hpp
    ${CMAKE_CURRENT_SOURCE_DIR}/shaper.hpp
    ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_delay.hpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_loss.hpp
    ${CMAKE_CURRENT_SOURCE_DIR}/tbf_filter.hpp
    PARENT_SCOPE
 )

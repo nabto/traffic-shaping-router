@@ -35,33 +35,37 @@ Router::Router() {
 bool Router::init(std::string extIf) {
     std::cout << "using all filters" << std::endl;
     inputDrop_   = std::make_shared<InputDrop>();
-    loss_   = std::make_shared<Loss>();
-    nat_    = std::make_shared<Nat>();
-    burst_  = std::make_shared<Burst>();
-    delay_  = std::make_shared<StaticDelay>();
-    dynDel_ = std::make_shared<DynamicDelay>();
-    tbf_    = std::make_shared<TokenBucketFilter>();
+    loss_    = std::make_shared<Loss>();
+    nat_     = std::make_shared<Nat>();
+    burst_   = std::make_shared<Burst>();
+    delay_   = std::make_shared<StaticDelay>();
+    dynDel_  = std::make_shared<DynamicDelay>();
+    dynLoss_ = std::make_shared<DynamicLoss>();
+    tbf_     = std::make_shared<TokenBucketFilter>();
     outputLibnet_ = std::make_shared<OutputLibnet>();
     inputDrop_->setNext(loss_);
     loss_->setNext(nat_);
     nat_->setNext(burst_);
     burst_->setNext(delay_);
-    delay_->setNext(dynDel_);
+    delay_->setNext(dynLoss_);
+    dynLoss_->setNext(dynDel_);
     dynDel_->setNext(tbf_);
     tbf_->setNext(outputLibnet_);
     start_ = inputDrop_;
 
     input6_   = std::make_shared<Input>();
-    loss6_   = std::make_shared<Loss>();
-    burst6_  = std::make_shared<Burst>();
-    delay6_  = std::make_shared<StaticDelay>();
-    dynDel6_ = std::make_shared<DynamicDelay>();
-    tbf6_    = std::make_shared<TokenBucketFilter>();
-    output6_ = std::make_shared<Output>();
+    loss6_    = std::make_shared<Loss>();
+    burst6_   = std::make_shared<Burst>();
+    delay6_   = std::make_shared<StaticDelay>();
+    dynDel6_  = std::make_shared<DynamicDelay>();
+    dynLoss6_ = std::make_shared<DynamicLoss>();
+    tbf6_     = std::make_shared<TokenBucketFilter>();
+    output6_  = std::make_shared<Output>();
     input6_->setNext(loss6_);
     loss6_->setNext(burst6_);
     burst6_->setNext(delay6_);
-    delay6_->setNext(dynDel6_);
+    delay6_->setNext(dynLoss6_);
+    dynLoss6_->setNext(dynDel6_);
     dynDel6_->setNext(tbf6_);
     tbf6_->setNext(output6_);
     start6_ = input6_;
@@ -154,7 +158,18 @@ bool Router::init(std::string extIf, std::vector<std::string> filters) {
             last6->setNext(dynDel6_);
             last6 = dynDel6_;
             
-        }else if (it.compare("Output") == 0){
+        } else if (it.compare("DynamicLoss") == 0){
+#ifdef TRACE_LOG
+            std::cout << "adding DynamicLoss filter" << std::endl;
+#endif
+            dynLoss_ = std::make_shared<DynamicLoss>();
+            last->setNext(dynLoss_);
+            last = dynLoss_;
+            dynLoss6_ = std::make_shared<DynamicLoss>();
+            last6->setNext(dynLoss6_);
+            last6 = dynLoss6_;
+            
+        } else if (it.compare("Output") == 0){
 #ifdef TRACE_LOG
             std::cout << "adding Output filter" << std::endl;
 #endif
@@ -379,6 +394,12 @@ bool Router::initFilters(struct nfq_q_handle *qh){
             return false;
         }
     }
+    if(dynLoss_) {
+        if(!dynLoss_->init()){
+            std::cout << "initialization of Dynamic loss filter failed" << std::endl;
+            return false;
+        }
+    }
     if(loss_) {
         if(!loss_->init()){
             std::cout << "initialization of loss filter failed" << std::endl;
@@ -442,6 +463,12 @@ bool Router::init6Filters(struct nfq_q_handle *qh){
     if(dynDel6_) {
         if(!dynDel6_->init()){
             std::cout << "initialization of Dynamic delay 6 filter failed" << std::endl;
+            return false;
+        }
+    }
+    if(dynLoss6_) {
+        if(!dynLoss6_->init()){
+            std::cout << "initialization of Dynamic Loss 6 filter failed" << std::endl;
             return false;
         }
     }

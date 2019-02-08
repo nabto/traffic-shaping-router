@@ -7,6 +7,7 @@
 #include "filter.hpp"
 #include <filters/shaper.hpp>
 #include <filters/dynamic_delay.hpp>
+#include <filters/dynamic_loss.hpp>
 #include <filters/nat.hpp>
 #include <filters/burst_filter.hpp>
 #include <filters/tbf_filter.hpp>
@@ -111,6 +112,11 @@ class Router : public Filter, public std::enable_shared_from_this<Router>
         if(dynDel_){dynDel_->setDelays(d,r);}
         if(dynDel6_){dynDel6_->setDelays(d,r);}
     }
+    // DynamicLoss filter
+    void setDynamicLosses(std::vector<int> t, std::vector<float> l){
+        if(dynLoss_){dynLoss_->setLosses(t,l);}
+        if(dynLoss6_){dynLoss6_->setLosses(t,l);}
+    }
     
     // Since router is the first filter, handlePacket is not used
     void handlePacket(std::shared_ptr<ParentPacket> pkt);
@@ -133,6 +139,7 @@ class Router : public Filter, public std::enable_shared_from_this<Router>
     std::shared_ptr<Burst> burst_;
     std::shared_ptr<TokenBucketFilter> tbf_;
     std::shared_ptr<DynamicDelay> dynDel_;
+    std::shared_ptr<DynamicLoss> dynLoss_;
     std::shared_ptr<OutputLibnet> outputLibnet_;
     std::shared_ptr<Output> output_;
 
@@ -145,6 +152,7 @@ class Router : public Filter, public std::enable_shared_from_this<Router>
     std::shared_ptr<Burst> burst6_;
     std::shared_ptr<TokenBucketFilter> tbf6_;
     std::shared_ptr<DynamicDelay> dynDel6_;
+    std::shared_ptr<DynamicLoss> dynLoss6_;
     std::shared_ptr<Output6Libnet> output6Libnet_;
     std::shared_ptr<Output> output6_;
 };

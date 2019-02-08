@@ -13,12 +13,12 @@ The Traffic Shaping Router defines a simple c++ interface for the filters. This 
 class Loss : public Filter, public std::enable_shared_from_this<Loss>
 {
  public:
-    Loss(): loss_(0) {srand (static_cast <unsigned> (time(0)));}
+    Loss() {srand (static_cast <unsigned> (time(0)));}
     ~Loss() {}
     // Packet handler which droppes packets randomly
     void handlePacket(PacketPtr pkt){
         float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        if (r < loss_){
+        if (r < 0.01){
             pkt->setVerdict(false);
             return;
         }
@@ -73,12 +73,13 @@ make -j
 ```
 
 ## Overall implementation design
-The main function creates an instance of the Router class, configures it. If the `ipv6` options is set, the main function calls the `execute6()`function, otherwise `execute()` is called (The main function could be extended to run both in seperate threads for dualstack). The Router class then starts receiving packets from the nf queue. When a packet is received, it is dropped from the nf queue if running in Drop mode, otherwise, the packet is send through a series of filters which is classes extending the Filter class. Each filter can alter the packet(only in drop mode), and choose wether or not to send it to the next filter in the series. If all filters choose to forward the packet, it ends in the Output filter which will send the packet to the network through the iptables OUTPUT chain. If a filter does not forward a packet to the next filter, it must call the `setVerdict(false)` function of the packet to drop it. Currently, 6 filters exists not counting the Output filter:
+The main function creates an instance of the Router class, configures it. If the `ipv6` options is set, the main function calls the `execute6()`function, otherwise `execute()` is called (The main function could be extended to run both in seperate threads for dualstack). The Router class then starts receiving packets from the nf queue. When a packet is received, it is dropped from the nf queue if running in Drop mode, otherwise, the packet is send through a series of filters which is classes extending the Filter class. Each filter can alter the packet(only in drop mode), and choose wether or not to send it to the next filter in the series. If all filters choose to forward the packet, it ends in the Output filter which will send the packet to the network through the iptables OUTPUT chain. If a filter does not forward a packet to the next filter, it must call the `setVerdict(false)` function of the packet to drop it. Currently, 7 filters exists not counting the Output filter:
 
   * The Nat filter implements port restricted nat. It also supports port forwarding.
   * The Loss filter randomly drops packets based on a given probability.
   * The StaticDelay filter delays all packets with a static delay.
   * The DynamicDelay filter delays all packets according to a specified pattern.
+  * The DynamicLoss filter drops packets according to a specified pattern.
   * The Burst filter buffers all incoming packets for a given amount of time, and then forwards all simultaniously
   * The TokenBucketFilter is used to impose bandwidth limitations
 
@@ -115,6 +116,8 @@ Allowed options:
   --dyn-delays arg          Delay values for the dynamic delay filter
   --dyn-delay-res arg       The time resolution of the delay values for delay 
                             filter
+  --dyn-losses arg          Loss values for the dynamic loss filter
+  --dyn-loss-times arg      time values for the dynamic loss filter
   --burst-dur arg           The time in ms when packets are collected for 
                             bursts
   --burst-sleep arg         The time in ms between bursts
@@ -125,11 +128,11 @@ Allowed options:
                             internal ports
   --filters arg             Ordered list of filters to use, valid filters are: 
                             StaticDelay, Loss, Nat, Burst, TokenBucketFilter, 
-                            DynamicDelay
+                            DynamicDelay, DynamicLoss
   --ipv6                    use IPv6 instead of IPv4
   --accept-mode             run the router in accept mode instead of drop mode
 ```
-The filters argument determines which filters to use. If this option is used, only the filters listed will be added to the filter chain, and will be added in the order they are listed. If this option is not used, all filters are added in the order: Loss, Nat, Burst, Delay, TokenBucketFilter, DynamicDelay. Options for a filter which is not added is ignored silently.
+The filters argument determines which filters to use. If this option is used, only the filters listed will be added to the filter chain, and will be added in the order they are listed. If this option is not used, all filters are added in the order: Loss, Nat, Burst, Delay, TokenBucketFilter, DynamicDelay, DynamicLoss. Options for a filter which is not added is ignored silently.
 
 nat-ext-ip and nat-int-ip is the external and internal IP address of the router, these two fields are required to use the Nat filter in the router.
 
@@ -159,6 +162,9 @@ The DynamicDelay filter is similar to the StaticDelay filter, except imposed del
 If `dyn-delays` is set to `"20 40 30"` with a `dyn-delay-res` set to 2, the delay will be 20ms when the router starts, 2 seconds later it will be 40ms, at 4 seconds it will be 30ms, and at 6 seconds it resets to 20ms.
 between fix points, the delay is extrapolated liniarly with a 1 second resolution.
 Meaning at 1 seconds, the delay is 30ms, at 3 seconds it is 35ms, and at 5 seconds it is 25ms.
+
+### DynamicLoss
+The DynamicLoss filter implements packet losses which change according to a configured pattern. This filter is configured with the options `dyn-losses` and `dyn-loss-times`. Both options are given as arrays which must have the same length. `--dyn-losses 0 0.1 0.5 --dyn-loss-times 2 1 3` means the filter will impose 0% packet loss for 2 seconds, then a 10% packet loss for 1 second, then 50% packet loss for 3 senconds, and then repeat the pattern.
 
 ## Testing in Docker
 The router is developed for testing in a docker container. The test folder on the repository contains an example of using the router in a docker-compose setup. In the test folder are several subfolders: 
