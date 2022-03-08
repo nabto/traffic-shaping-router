@@ -5,7 +5,7 @@ The Traffic shaping router is a linux router designed to emulate different netwo
 
 Varying delays in network will often be caused by cross-traffic from other users causing longer queues in network equipment, which should not impose packet reordering. This functionallity is not available in netEm. Linux tc is also designed to work on outgoing traffic only, though this can be circumvented by piping traffic, this is a hassle to get working. netEm offers thoughput limitation through the rate option. This option is made as a replacement for the TBF option in tc since using TBF together with netEm required sequential queueing disciplines in tc which, though possible, is hard to get working. 
 
-If other queueing disciplines is to be emulated (like RED or HTB), these would still require sequential queing disciplines in tc. The Traffic Shaping Router aims to simplify network emulation significantly, while increasing the flexibility of the emulation. The Traffic Shaping Router takes each packet and passes it though a simple chain of filters which can alter, delay, or drop packets this approach greatly simplifies the usage compared to using several queing disciplines in tc. 
+If other queueing disciplines is to be emulated (like RED or HTB), these would still require sequential queing disciplines in tc. The Traffic Shaping Router aims to simplify network emulation significantly, while increasing the flexibility of the emulation. The Traffic Shaping Router takes each packet and passes it though a simple chain of filters which can alter, delay, or drop packets. This approach greatly simplifies the usage compared to using several queing disciplines in tc. 
 
 The Traffic Shaping Router defines a simple c++ interface for the filters. This means any functionallity not directly covered by existing filters can easily be added by implementing a new filter. As an example of the simplicity of implementing a filter, below is an example of a filter randomly dropping packets with a 1% probability:
 
@@ -15,7 +15,7 @@ class Loss : public Filter, public std::enable_shared_from_this<Loss>
  public:
     Loss() {srand (static_cast <unsigned> (time(0)));}
     ~Loss() {}
-    // Packet handler which droppes packets randomly
+    // Packet handler which drops packets randomly
     void handlePacket(PacketPtr pkt){
         float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
         if (r < 0.01){
@@ -28,29 +28,29 @@ class Loss : public Filter, public std::enable_shared_from_this<Loss>
 ```
 
 ## Basic design
-The router is based on iptables, which takes all packets directly from the network interfaces, and sends them through a series of chains which can change packets and make decisions on where to send packets. Iptables uses 5 main chains, PREROUTING applies DNAT as the first chain when a packet is received on an interface. A routing decision is then made whether the packet is destined for the local host or is to be forwarded to another interface. Packets for the local host is send to the INPUT chain whereas packets for other hosts is send to the FORWARD chain. These chains can then apply firewall rules where unwanted packets can be dropped, and wanted packets can be passed on. Packets originating from the local host is send to the OUTPUT chain which can perform similar firewall actions. When a packet leaves the OUTPUT or FORWARD chains, they are sent to the POSTROUTING chain which applies SNAT before sending it out on the network interface.
+The router is based on iptables, which takes all packets directly from the network interfaces and sends them through a series of chains which can change packets and make decisions on where to send packets. Iptables uses 5 main chains, PREROUTING applies DNAT as the first chain when a packet is received on an interface. A routing decision is then made whether the packet is destined for the local host or is to be forwarded to another interface. Packets for the local host is send to the INPUT chain whereas packets for other hosts are sent to the FORWARD chain. These chains can then apply firewall rules where unwanted packets can be dropped, and wanted packets can be passed on. Packets originating from the local host is send to the OUTPUT chain which can perform similar firewall actions. When a packet leaves the OUTPUT or FORWARD chains, they are sent to the POSTROUTING chain which applies SNAT before sending it out on the network interface.
 
-The router works by redirecting traffic coming into iptable chains to the user space by using nf queue. This means the firewall rules applied to the chains should put packets into the nf queue (the router uses queue number 0). The command for applying such a rule to the INPUT chain is shown here:
+The router works by redirecting traffic coming into iptable chains to the user space by using the nf queue. This means the firewall rules applied to the chains should put packets into the nf queue (the router uses queue number 0). The command for applying such a rule to the INPUT chain is shown here:
 
 ```
 iptables -A INPUT -j NFQUEUE --queue-num 0
 ```
 
-The router can operate in two different ways. In Drop mode, all packets coming to the router is dropped from iptables, and after the packets has gone through the filter chain, a new packet is created and send from the router. In Accept mode, the packets are kept in the iptables buffer, and is then either dropped by a filter in the chain, or accepted when the packet reaches the end of the filter chain.
+The router can operate in two different ways. In Drop mode, all packets coming to the router is dropped from iptables, and after the packets have gone through the filter chain, a new packet is created and sent from the router. In Accept mode, the packets are kept in the iptables buffer, and are then either dropped by a filter in the chain, or accepted when the packet reaches the end of the filter chain.
 
 ### Drop mode
-Drop mode is needed if the content of a packet can change through the filter chain. This means if the router implemets NAT functionallity, it must run in Drop mode. If NAT functionallity is used, incoming packets will be destined for the local host on which the router is running. This means that both the INPUT and the FORWARD iptables chains should be send to the NF QUEUE:
+Drop mode is needed if the content of a packet can change through the filter chain. This means if the router implemets NAT functionallity, it must run in Drop mode. If NAT functionallity is used, incoming packets will be destined for the local host on which the router is running. This means that both the INPUT and the FORWARD iptables chains should be sent to NFQUEUE:
 ```
 iptables -A INPUT -j NFQUEUE --queue-num 0
 iptables -A FORWARD -j NFQUEUE --queue-num 0
 ```
-In this case, shaped traffic cannot be destined for the host on which the router is running. This is because packets being shaped is dropped from iptables, and recreated in userspace and then sent to the OUTPUT chain. If the packet is destined for the host, it will then arrive back in the INPUT chain and run endless through the shaper. The host machine will, however, be able to send/receive packets which is not shaped by filtering this traffic around the NFQUEUE in iptables:
+In this case, shaped traffic cannot be destined for the host on which the router is running. This is because packets being shaped are dropped from iptables, and recreated in userspace and then sent to the OUTPUT chain. If the packet is destined for the host, it will then arrive back in the INPUT chain and run endless through the shaper. The host machine will, however, be able to send/receive packets which is not shaped by filtering this traffic around the NFQUEUE in iptables:
 ```
 iptables -A INPUT ! -i eth0 -j ACCEPT
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 iptables -t raw -A OUTPUT ! -s 10.0.2.2/24 -j NOTRACK
 ```
-If no NAT functionalities are used, only traffic from the FORWARD chain needs to be sent to NF QUEUE, making unshaped communication with the local host possible without such iptables filters.
+If no NAT functionalities are used, only traffic from the FORWARD chain needs to be sent to NFQUEUE, making unshaped communication with the local host possible without such iptables filters.
 
 ### Accept mode
 Accept mode enables the router to shape packets for the same host on which it is running. However, this mode does not support altering packet content (and by extention no NAT support). Since this will keep packets in the iptables buffer, and then accept or drop based on the filter chain, this can be added to any iptables chain:
@@ -73,7 +73,7 @@ make -j
 ```
 
 ## Overall implementation design
-The main function creates an instance of the Router class, configures it. If the `ipv6` options is set, the main function calls the `execute6()`function, otherwise `execute()` is called (The main function could be extended to run both in seperate threads for dualstack). The Router class then starts receiving packets from the nf queue. When a packet is received, it is dropped from the nf queue if running in Drop mode, otherwise, the packet is send through a series of filters which is classes extending the Filter class. Each filter can alter the packet(only in drop mode), and choose wether or not to send it to the next filter in the series. If all filters choose to forward the packet, it ends in the Output filter which will send the packet to the network through the iptables OUTPUT chain. If a filter does not forward a packet to the next filter, it must call the `setVerdict(false)` function of the packet to drop it. Currently, 7 filters exists not counting the Output filter:
+The main function creates an instance of the Router class, configures it. If the `ipv6` option is set, the main function calls the `execute6()`function, otherwise `execute()` is called (The main function could be extended to run both in seperate threads for dualstack). The Router class then starts receiving packets from the nf queue. When a packet is received, it is dropped from the nf queue if running in Drop mode, otherwise, the packet is send through a series of filters which are classes extending the Filter class. Each filter can alter the packet (only in drop mode), and choose wether or not to send it to the next filter in the series. If all filters choose to forward the packet, it ends in the Output filter which will send the packet to the network through the iptables OUTPUT chain. If a filter does not forward a packet to the next filter, it must call the `setVerdict(false)` function of the packet to drop it. Currently, 7 filters exists not counting the Output filter:
 
   * The Nat filter implements port restricted nat. It also supports port forwarding.
   * The Loss filter randomly drops packets based on a given probability.
